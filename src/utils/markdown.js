@@ -82,6 +82,23 @@ export const stripMarkdown = (content, maxLength = 200) => {
   if (!content) return ''
 
   try {
+    // SSR 环境下降级处理，避免 document 未定义
+    if (typeof document === 'undefined') {
+      let text = content
+        .replace(/!\[([^\]]*)\]\([^)]+\)/g, '') // 移除图片
+        .replace(/\[([^\]]*)\]\([^)]+\)/g, '$1') // 链接保留文字
+        .replace(/<[^>]+>/g, '') // 移除 HTML 标签
+        .replace(/#{1,6}\s+/g, '') // 移除标题标记
+        .replace(/[*_~`>|+-]/g, '') // 移除常见 Markdown 符号
+        .replace(/\s+/g, ' ')
+        .trim()
+
+      if (maxLength && text.length > maxLength) {
+        text = text.substring(0, maxLength) + '...'
+      }
+      return text
+    }
+
     const html = marked.parse(content)
     const cleanHtml = DOMPurify.sanitize(html, purifyConfig)
 

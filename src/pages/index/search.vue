@@ -277,7 +277,7 @@ const handlePageChange = () => {
 }
 
 const goToProfile = (userId) => {
-  router.push(`/profile?id=${userId}`)
+  router.push(`/user/${userId}`)
 }
 
 const syncFromRoute = () => {

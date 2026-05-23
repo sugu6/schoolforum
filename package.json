@@ -29,6 +29,7 @@
     "@vueuse/core": "^14.2.1",
     "@vueuse/router": "^14.2.1",
     "alova": "^3.5.1",
+    "dompurify": "^3.4.5",
     "loglevel": "^1.9.2",
     "lowlight": "^3.3.0",
     "marked": "^17.0.5",

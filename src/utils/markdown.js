@@ -1,10 +1,25 @@
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import { getServerURL } from '@/config/server'
 
 marked.setOptions({
   breaks: true,
   gfm: true,
 })
+
+const purifyConfig = {
+  ALLOWED_TAGS: [
+    'p', 'br', 'strong', 'em', 'u', 's', 'del', 'code', 'pre',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'ul', 'ol', 'li', 'blockquote', 'a', 'img', 'hr',
+    'table', 'thead', 'tbody', 'tr', 'th', 'td',
+    'span', 'div', 'input',
+  ],
+  ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'id', 'target', 'rel', 'type', 'checked', 'disabled'],
+  ALLOW_DATA_ATTR: false,
+  FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'button', 'style', 'link', 'meta'],
+  FORBID_ATTR: ['onclick', 'onload', 'onerror', 'onmouseover', 'onfocus', 'onblur', 'onchange', 'onsubmit'],
+}
 
 const processImagePaths = (content) => {
   if (!content) return ''
@@ -39,7 +54,8 @@ export const renderMarkdown = (content) => {
   const processedContent = processImagePaths(content)
 
   try {
-    return marked.parse(processedContent)
+    const html = marked.parse(processedContent)
+    return DOMPurify.sanitize(html, purifyConfig)
   } catch (error) {
     console.error('Markdown 渲染失败:', error)
     return escapeHtml(processedContent)
@@ -52,7 +68,8 @@ export const renderMarkdownAsync = async (content) => {
   const processedContent = processImagePaths(content)
 
   try {
-    return await marked.parse(processedContent)
+    const html = await marked.parse(processedContent)
+    return DOMPurify.sanitize(html, purifyConfig)
   } catch (error) {
     console.error('Markdown 渲染失败:', error)
     return escapeHtml(processedContent)
@@ -64,34 +81,28 @@ export const renderMarkdownSync = (content) => renderMarkdown(content)
 export const stripMarkdown = (content, maxLength = 200) => {
   if (!content) return ''
 
-  let text = content
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/`[^`]+`/g, '')
-    .replace(/!\[.*?\]\(.*?\)/g, '')
-    .replace(/\[([^\]]+)\]\(.*?\)/g, '$1')
-    .replace(/#{1,6}\s+/g, '')
-    .replace(/(\*\*|__)(.*?)\1/g, '$2')
-    .replace(/(\*|_)(.*?)\1/g, '$2')
-    .replace(/~~(.*?)~~/g, '$1')
-    .replace(/^\s*[-*+]\s+/gm, '')
-    .replace(/^\s*\d+\.\s+/gm, '')
-    .replace(/^\s*>/gm, '')
-    .replace(/\n+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+  try {
+    const html = marked.parse(content)
+    const cleanHtml = DOMPurify.sanitize(html, purifyConfig)
 
-  if (maxLength && text.length > maxLength) {
-    text = text.substring(0, maxLength) + '...'
+    const div = document.createElement('div')
+    div.innerHTML = cleanHtml
+    let text = div.textContent || div.innerText || ''
+
+    text = text.replace(/\s+/g, ' ').trim()
+
+    if (maxLength && text.length > maxLength) {
+      text = text.substring(0, maxLength) + '...'
+    }
+
+    return text
+  } catch (error) {
+    console.error('Markdown 清理失败:', error)
+    if (maxLength && content.length > maxLength) {
+      return content.substring(0, maxLength) + '...'
+    }
+    return content
   }
-
-  return text
 }
 
 export const extractImages = (content, maxImages = 3) => {

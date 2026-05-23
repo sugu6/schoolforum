@@ -75,6 +75,10 @@ export default defineConfig(({ mode }) => {
           target: serverTarget,
           changeOrigin: true,
         },
+        '/notifications': {
+          target: serverTarget,
+          changeOrigin: true,
+        },
         '/ws': {
           target: serverTarget.replace(/^http/, 'ws'),
           ws: true,

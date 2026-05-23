@@ -89,7 +89,8 @@ export const stripMarkdown = (content, maxLength = 200) => {
         .replace(/\[([^\]]*)\]\([^)]+\)/g, '$1') // 链接保留文字
         .replace(/<[^>]+>/g, '') // 移除 HTML 标签
         .replace(/#{1,6}\s+/g, '') // 移除标题标记
-        .replace(/[*_~`>|+-]/g, '') // 移除常见 Markdown 符号
+        .replace(/[*_~`>|+]/g, '') // 移除常见 Markdown 符号
+        .replace(/^[-*+]\s+/gm, '') // 移除列表标记（保留文本中的连字符）
         .replace(/\s+/g, ' ')
         .trim()
 

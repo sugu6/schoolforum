@@ -8,6 +8,7 @@ import { getWebSocketURL, getAvatarURL } from '@/config/server'
 export const useMessageStore = defineStore('message', () => {
   const unreadCount = ref(0)
   const messageHandlers = ref([])
+  const suppressServerUnreadUntil = ref(0)
 
   const hasUnread = computed(() => unreadCount.value > 0)
 
@@ -51,10 +52,14 @@ export const useMessageStore = defineStore('message', () => {
         }
       }
     } else if (data.type === 'UNREAD_MESSAGE_COUNT' || data.type === 'unread_count_update') {
-      if (data.type === 'unread_count_update') {
-        unreadCount.value = data.data?.unreadCount ?? 0
+      if (Date.now() < suppressServerUnreadUntil.value) {
+        // 跳过：刚在私信页标记已读，后端推送的旧值可能还未更新
       } else {
-        unreadCount.value = data.count ?? data.data ?? 0
+        if (data.type === 'unread_count_update') {
+          unreadCount.value = data.data?.unreadCount ?? 0
+        } else {
+          unreadCount.value = data.count ?? data.data ?? 0
+        }
       }
     } else if (data.type === 'MESSAGE_READ') {
       const readCount = data.count ?? data.data ?? 1
@@ -117,6 +122,10 @@ export const useMessageStore = defineStore('message', () => {
     unreadCount.value = 0
   }
 
+  const suppressServerUnread = (duration = 3000) => {
+    suppressServerUnreadUntil.value = Date.now() + duration
+  }
+
   const addMessageHandler = (handler) => {
     messageHandlers.value.push(handler)
   }
@@ -136,6 +145,7 @@ export const useMessageStore = defineStore('message', () => {
     incrementUnread,
     decrementUnread,
     clearUnread,
+    suppressServerUnread,
     addMessageHandler,
     removeMessageHandler,
     connectWebSocket,

@@ -218,7 +218,13 @@ const getAvatarUrl = (msg) => {
   if (msg.senderId === currentUserId.value) {
     return userStore.avatar || null
   }
-  return getAvatarURL(msg.sender?.avatarUrl) || null
+  if (msg.sender?.avatarUrl) {
+    return getAvatarURL(msg.sender.avatarUrl)
+  }
+  if (currentConversation.value?.otherAvatarUrl) {
+    return getAvatarURL(currentConversation.value.otherAvatarUrl)
+  }
+  return null
 }
 
 const route = useRoute()
@@ -253,6 +259,8 @@ const fetchConversations = async () => {
           currentConversation.value = tempConv
           messages.value = []
         }
+      } else if (conversations.value.length > 0 && !currentConversation.value) {
+        selectConversation(conversations.value[0])
       }
     }
   } catch (error) {
@@ -269,6 +277,7 @@ const selectConversation = async (conv) => {
   await fetchMessages()
   if (conv.unreadCount > 0) {
     const unreadDecrease = conv.unreadCount
+    messageStore.suppressServerUnread()
     await markMessagesAsRead(conv.id)
     conv.unreadCount = 0
     totalUnread.value = conversations.value.reduce((sum, c) => sum + (c.unreadCount || 0), 0)
@@ -436,6 +445,7 @@ const handleIncomingMessage = (message) => {
     }
 
     markMessagesAsRead(currentConversation.value.id)
+    messageStore.suppressServerUnread()
     return true
   }
   return false

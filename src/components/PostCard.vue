@@ -483,6 +483,17 @@ const setupImagePreview = () => {
   const images = contentRef.value.querySelectorAll('img')
   const imgUrls = []
 
+  // 修正所有未转换的相对图片URL（兜底 processImagePaths 可能遗漏的情况）
+  images.forEach((img) => {
+    const src = img.getAttribute('src')
+    if (src && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('data:') && !src.startsWith('blob:')) {
+      const fixed = getImageURL(src)
+      if (fixed) {
+        img.setAttribute('src', fixed)
+      }
+    }
+  })
+
   // 收集所有图片URL
   images.forEach((img) => {
     const src = img.getAttribute('src')

@@ -321,6 +321,7 @@ const editor = useEditor({
         levels: [1, 2, 3, 4, 5, 6],
       },
       paragraph: false,
+      underline: false,
     }),
     Paragraph.configure({
       HTMLAttributes: {

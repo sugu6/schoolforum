@@ -93,7 +93,7 @@ export const useNotificationStore = defineStore('notification', () => {
     connect: connectSSE,
     disconnect: disconnectSSE,
   } = useRealtimeConnection({
-    createConnection: () => {
+    createConnection: (callbacks) => {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token')
       const url = getSSEURL('/notifications/subscribe')
 
@@ -104,10 +104,15 @@ export const useNotificationStore = defineStore('notification', () => {
 
       return createSSEConnection(url, {
         headers,
-        onMessage: handleSSEMessage,
+        onOpen: callbacks?.onOpen,
+        onMessage: callbacks?.onMessage,
         onError: (error) => {
           console.error('SSE 连接错误:', error)
+          if (callbacks?.onError) {
+            callbacks.onError(error)
+          }
         },
+        onClose: callbacks?.onClose,
       })
     },
     onMessage: handleSSEMessage,

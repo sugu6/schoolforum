@@ -50,8 +50,12 @@ export const useMessageStore = defineStore('message', () => {
           showNewMessageNotification(message)
         }
       }
-    } else if (data.type === 'UNREAD_MESSAGE_COUNT') {
-      unreadCount.value = data.count ?? data.data ?? 0
+    } else if (data.type === 'UNREAD_MESSAGE_COUNT' || data.type === 'unread_count_update') {
+      if (data.type === 'unread_count_update') {
+        unreadCount.value = data.data?.unreadCount ?? 0
+      } else {
+        unreadCount.value = data.count ?? data.data ?? 0
+      }
     } else if (data.type === 'MESSAGE_READ') {
       const readCount = data.count ?? data.data ?? 1
       decrementUnread(readCount)
@@ -63,7 +67,7 @@ export const useMessageStore = defineStore('message', () => {
     connect: connectWebSocket,
     disconnect: disconnectWebSocket,
   } = useRealtimeConnection({
-    createConnection: () => {
+    createConnection: (callbacks) => {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token')
       if (!token) {
         throw new Error('No token available')
@@ -72,10 +76,15 @@ export const useMessageStore = defineStore('message', () => {
       const wsUrl = getWebSocketURL(`/ws/message?token=${encodeURIComponent(token)}`)
 
       return createWebSocketConnection(wsUrl, {
-        onMessage: handleWSMessage,
+        onOpen: callbacks?.onOpen,
+        onMessage: callbacks?.onMessage,
         onError: (error) => {
           console.error('WebSocket 连接错误:', error)
+          if (callbacks?.onError) {
+            callbacks.onError(error)
+          }
         },
+        onClose: callbacks?.onClose,
       })
     },
     onMessage: handleWSMessage,

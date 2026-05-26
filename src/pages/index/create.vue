@@ -84,7 +84,6 @@
                   :auto-upload="false"
                   :show-file-list="false"
                   accept="image/*"
-                  :limit="1"
                   @change="handleCoverChange"
                 >
                   <template #upload-button>
@@ -345,20 +344,25 @@ const fetchTagsByCategory = async (categoryId) => {
   }
 }
 
-const handleCoverChange = async (_, file) => {
+const handleCoverChange = async (fileList, file) => {
   if (!file || !file.file) return
 
   const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
   if (!validTypes.includes(file.file.type)) {
     Message.error('请上传 JPG、PNG、GIF 或 WebP 格式的图片')
+    coverFileList.value = []
     return
   }
 
   if (file.file.size > 5 * 1024 * 1024) {
     Message.error('图片大小不能超过 5MB')
+    coverFileList.value = []
     return
   }
 
+  if (coverPreview.value && coverPreview.value.startsWith('blob:')) {
+    URL.revokeObjectURL(coverPreview.value)
+  }
   coverPreview.value = URL.createObjectURL(file.file)
   coverFileList.value = [file]
 
@@ -369,10 +373,14 @@ const handleCoverChange = async (_, file) => {
       Message.success('封面上传成功')
     } else {
       Message.error(res.message || '封面上传失败')
+      coverPreview.value = ''
+      coverFileList.value = []
     }
   } catch (error) {
     console.error('上传封面失败:', error)
     Message.error('封面上传失败')
+    coverPreview.value = ''
+    coverFileList.value = []
   }
 }
 

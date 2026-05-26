@@ -80,6 +80,7 @@
             <a-form-item label="封面图片" field="coverImage">
               <div class="cover-upload-section">
                 <a-upload
+                  :key="coverUploadKey"
                   :fileList="coverFileList"
                   :auto-upload="false"
                   :show-file-list="false"
@@ -262,6 +263,7 @@ const tagOptions = ref([])
 const tagsLoading = ref(false)
 const coverFileList = ref([])
 const coverPreview = ref('')
+const coverUploadKey = ref(0)
 const previewVisible = ref(false)
 const drafts = useLocalStorage('postDrafts', [])
 const currentTime = ref('')
@@ -344,8 +346,12 @@ const fetchTagsByCategory = async (categoryId) => {
   }
 }
 
+const uploadingCover = ref(false)
+
 const handleCoverChange = async (fileList, file) => {
   if (!file || !file.file) return
+
+  if (uploadingCover.value) return
 
   const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
   if (!validTypes.includes(file.file.type)) {
@@ -366,6 +372,7 @@ const handleCoverChange = async (fileList, file) => {
   coverPreview.value = URL.createObjectURL(file.file)
   coverFileList.value = [file]
 
+  uploadingCover.value = true
   try {
     const res = await uploadPostImage(file.file)
     if (res.code === 200) {
@@ -381,6 +388,8 @@ const handleCoverChange = async (fileList, file) => {
     Message.error('封面上传失败')
     coverPreview.value = ''
     coverFileList.value = []
+  } finally {
+    uploadingCover.value = false
   }
 }
 
@@ -388,6 +397,7 @@ const removeCover = () => {
   coverPreview.value = ''
   coverFileList.value = []
   postForm.coverImage = ''
+  coverUploadKey.value++
 }
 
 const handleImageUpload = async (file) => {

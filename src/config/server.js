@@ -2,8 +2,13 @@ const isDev = import.meta.env.DEV
 
 const serverURL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8085'
 
+// 生产环境兜底：如果在 GitHub Pages 等静态托管上运行且 VITE_SERVER_URL 未注入，使用硬编码的后端地址
+const resolvedServerURL = isDev
+  ? serverURL
+  : (import.meta.env.VITE_SERVER_URL || 'https://schoolforum.sugu6.top:8443')
+
 export const serverConfig = {
-  baseURL: serverURL,
+  baseURL: resolvedServerURL,
   apiPrefix: '/api',
   avatarPrefix: '/avatars',
 }
@@ -11,11 +16,6 @@ export const serverConfig = {
 export const getServerURL = () => {
   if (isDev) {
     return ''
-  }
-  // 生产环境兜底：如果 VITE_SERVER_URL 未设置，使用默认生产后端地址
-  // 避免图片等静态资源被浏览器解析为当前域名下的相对路径导致 404
-  if (!serverConfig.baseURL || serverConfig.baseURL === 'http://localhost:8085') {
-    return 'https://schoolforum.sugu6.top:8443'
   }
   return serverConfig.baseURL
 }

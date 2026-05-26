@@ -1,6 +1,6 @@
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import { getServerURL } from '@/config/server'
+import { getServerURL, getImageURL } from '@/config/server'
 
 marked.setOptions({
   breaks: true,
@@ -20,6 +20,17 @@ const purifyConfig = {
   FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'button', 'style', 'link', 'meta'],
   FORBID_ATTR: ['onclick', 'onload', 'onerror', 'onmouseover', 'onfocus', 'onblur', 'onchange', 'onsubmit'],
 }
+
+// DOMPurify hook：在消毒阶段将所有相对图片路径转为完整后端地址
+// 防止 v-html 插入 DOM 时浏览器将相对路径解析到当前页面域名
+DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+  if (node.tagName === 'IMG' && node.hasAttribute('src')) {
+    const src = node.getAttribute('src')
+    if (src && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('data:') && !src.startsWith('blob:')) {
+      node.setAttribute('src', getImageURL(src))
+    }
+  }
+})
 
 const processImagePaths = (content) => {
   if (!content) return ''

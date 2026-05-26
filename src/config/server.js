@@ -12,6 +12,11 @@ export const getServerURL = () => {
   if (isDev) {
     return ''
   }
+  // 生产环境兜底：如果 VITE_SERVER_URL 未设置，使用默认生产后端地址
+  // 避免图片等静态资源被浏览器解析为当前域名下的相对路径导致 404
+  if (!serverConfig.baseURL || serverConfig.baseURL === 'http://localhost:8085') {
+    return 'https://schoolforum.sugu6.top:8443'
+  }
   return serverConfig.baseURL
 }
 

@@ -300,9 +300,9 @@ const calcHeat = (post) => {
     (post.viewCount || 0) * viewWeight
 
   const createdAt = post.createdAt ? new Date(post.createdAt).getTime() : Date.now()
-  const hoursSinceCreation = (Date.now() - createdAt) / (1000 * 60 * 60)
-  const timeDecay = Math.pow(hoursSinceCreation / decayBase, decayExponent)
-  const decayFactor = Math.max(timeDecay, 0.001)
+  const hoursSinceCreation = Math.max(0, (Date.now() - createdAt) / (1000 * 60 * 60))
+  const normalizedTime = 1.0 + (hoursSinceCreation / decayBase)
+  const timeDecay = Math.pow(normalizedTime, decayExponent)
 
   let specialBonus = 0
   if (post.isEssential === 'ESSENTIAL' || post.isEssential === 1) {
@@ -312,7 +312,7 @@ const calcHeat = (post) => {
     specialBonus += pinnedBonus
   }
 
-  const heatScore = baseScore / decayFactor + specialBonus
+  const heatScore = baseScore / timeDecay + specialBonus
   return Math.round(heatScore * 100) / 100
 }
 

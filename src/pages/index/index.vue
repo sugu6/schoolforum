@@ -283,39 +283,6 @@ const postList = ref([])
 
 const hotPosts = ref([])
 
-const calcHeat = (post) => {
-  const likeWeight = 3.0
-  const commentWeight = 5.0
-  const favoriteWeight = 4.0
-  const viewWeight = 0.1
-  const decayBase = 24.0
-  const decayExponent = 1.5
-  const essentialBonus = 50.0
-  const pinnedBonus = 30.0
-
-  const baseScore =
-    (post.likeCount || 0) * likeWeight +
-    (post.commentCount || 0) * commentWeight +
-    (post.favoriteCount || 0) * favoriteWeight +
-    (post.viewCount || 0) * viewWeight
-
-  const createdAt = post.createdAt ? new Date(post.createdAt).getTime() : Date.now()
-  const hoursSinceCreation = Math.max(0, (Date.now() - createdAt) / (1000 * 60 * 60))
-  const normalizedTime = 1.0 + (hoursSinceCreation / decayBase)
-  const timeDecay = Math.pow(normalizedTime, decayExponent)
-
-  let specialBonus = 0
-  if (post.isEssential === 'ESSENTIAL' || post.isEssential === 1) {
-    specialBonus += essentialBonus
-  }
-  if (post.isPinned === 'PINNED' || post.isPinned === 1) {
-    specialBonus += pinnedBonus
-  }
-
-  const heatScore = baseScore / timeDecay + specialBonus
-  return Math.round(heatScore * 100) / 100
-}
-
 const formatHeat = (num) => {
   if (num >= 10000) return (num / 10000).toFixed(1) + 'w'
   if (num >= 1000) return (num / 1000).toFixed(1) + 'k'
@@ -329,7 +296,7 @@ const fetchHotPosts = async () => {
       hotPosts.value = res.data.records.map((post) => ({
         id: post.id,
         title: post.title,
-        heat: calcHeat(post),
+        heat: post.hotScore || 0,
         viewCount: post.viewCount || 0,
         likeCount: post.likeCount || 0,
         commentCount: post.commentCount || 0,

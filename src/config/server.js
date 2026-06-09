@@ -5,7 +5,7 @@ const serverURL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8085'
 // 生产环境兜底：如果在 GitHub Pages 等静态托管上运行且 VITE_SERVER_URL 未注入，使用硬编码的后端地址
 const resolvedServerURL = isDev
   ? serverURL
-  : (import.meta.env.VITE_SERVER_URL || 'https://schoolforum.sugu6.top:8443')
+  : (import.meta.env.VITE_SERVER_URL || 'https://schoolforum.sugu6.top')
 
 export const serverConfig = {
   baseURL: resolvedServerURL,

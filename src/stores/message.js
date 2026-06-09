@@ -4,6 +4,7 @@ import { getUnreadMessageCount } from '@/apis/messages'
 import { useRealtimeConnection } from '@/composables/useRealtimeConnection'
 import { createWebSocketConnection } from '@/utils/websocketAdapter'
 import { getWebSocketURL, getAvatarURL } from '@/config/server'
+import log from '@/utils/logger'
 
 export const useMessageStore = defineStore('message', () => {
   const unreadCount = ref(0)
@@ -84,7 +85,7 @@ export const useMessageStore = defineStore('message', () => {
         onOpen: callbacks?.onOpen,
         onMessage: callbacks?.onMessage,
         onError: (error) => {
-          console.error('WebSocket 连接错误:', error)
+          log.error('WebSocket 连接错误:', error)
           if (callbacks?.onError) {
             callbacks.onError(error)
           }
@@ -94,7 +95,7 @@ export const useMessageStore = defineStore('message', () => {
     },
     onMessage: handleWSMessage,
     onError: (error) => {
-      console.error('WebSocket 连接错误:', error)
+      log.error('WebSocket 连接错误:', error)
     },
     reconnectDelay: 5000,
   })
@@ -106,7 +107,7 @@ export const useMessageStore = defineStore('message', () => {
         unreadCount.value = res.data?.unreadCount || 0
       }
     } catch (error) {
-      console.error('获取私信未读数失败:', error)
+      log.error('获取私信未读数失败:', error)
     }
   }
 

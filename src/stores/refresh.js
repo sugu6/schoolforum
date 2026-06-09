@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { reactive } from 'vue'
 
 export const useRefreshStore = defineStore('refresh', () => {
-  const refreshFlags = ref(new Map())
+  const refreshFlags = reactive(new Map())
 
   const markRefreshNeeded = (key) => {
     if (!key) return
-    refreshFlags.value.set(key, {
+    refreshFlags.set(key, {
       timestamp: Date.now(),
       needsRefresh: true,
     })
@@ -14,15 +14,15 @@ export const useRefreshStore = defineStore('refresh', () => {
 
   const shouldRefresh = (key) => {
     if (!key) return false
-    const flag = refreshFlags.value.get(key)
+    const flag = refreshFlags.get(key)
     return flag?.needsRefresh === true
   }
 
   const consumeRefresh = (key) => {
     if (!key) return false
-    const flag = refreshFlags.value.get(key)
+    const flag = refreshFlags.get(key)
     if (flag?.needsRefresh === true) {
-      refreshFlags.value.delete(key)
+      refreshFlags.delete(key)
       return true
     }
     return false
@@ -30,12 +30,12 @@ export const useRefreshStore = defineStore('refresh', () => {
 
   const clearRefreshFlag = (key) => {
     if (key) {
-      refreshFlags.value.delete(key)
+      refreshFlags.delete(key)
     }
   }
 
   const clearAllFlags = () => {
-    refreshFlags.value.clear()
+    refreshFlags.clear()
   }
 
   return {

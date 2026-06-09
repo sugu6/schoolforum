@@ -4,6 +4,8 @@ import VueHook from 'alova/vue'
 import log from '@/utils/logger'
 import { getAPIBaseURL } from '@/config/server'
 
+let handling401 = false
+
 const alovaInstance = createAlova({
   baseURL: getAPIBaseURL(),
   statesHook: VueHook,
@@ -27,13 +29,25 @@ const alovaInstance = createAlova({
       log.error(`[API ${method?.type} ✗] ${method?.url}`, error)
       if (error.response) {
         switch (error.response.status) {
-          case 401:
-            localStorage.removeItem('token')
-            localStorage.removeItem('userInfo')
-            sessionStorage.removeItem('token')
-            sessionStorage.removeItem('userInfo')
-            window.location.href = import.meta.env.BASE_URL + 'auth?mode=login'
+          case 401: {
+            // 防止并发 401 重复处理
+            if (!handling401) {
+              handling401 = true
+              // 延迟导入避免循环依赖
+              import('@/stores/user').then(({ useUserStore }) => {
+                const userStore = useUserStore()
+                userStore.clearUser()
+                return import('@/router')
+              }).then(({ default: router }) => {
+                router.push('/auth?mode=login')
+              }).catch(() => {
+                handling401 = false
+              }).finally(() => {
+                handling401 = false
+              })
+            }
             break
+          }
         }
       }
       throw error

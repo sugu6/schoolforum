@@ -1,4 +1,4 @@
-﻿<template>
+﻿﻿<template>
   <div class="messages-page">
     <div class="messages-container">
       <div class="conversations-panel">
@@ -158,6 +158,7 @@ import {
 import { useUserStore } from '@/stores/user'
 import { useMessageStore } from '@/stores/message'
 import { getAvatarURL } from '@/config/server'
+import log from '@/utils/logger'
 
 definePage({
   meta: {
@@ -264,7 +265,7 @@ const fetchConversations = async () => {
       }
     }
   } catch (error) {
-    console.error('获取会话列表失败:', error)
+    log.error('获取会话列表失败:', error)
   } finally {
     conversationsLoading.value = false
   }
@@ -307,7 +308,7 @@ const fetchMessages = async () => {
       })
     }
   } catch (error) {
-    console.error('获取消息记录失败:', error)
+    log.error('获取消息记录失败:', error)
   } finally {
     messagesLoading.value = false
   }
@@ -329,7 +330,7 @@ const loadMoreMessages = async () => {
       hasMoreMessages.value = (res.data?.records?.length || 0) >= 20
     }
   } catch (error) {
-    console.error('加载更多消息失败:', error)
+    log.error('加载更多消息失败:', error)
   } finally {
     loadingMore.value = false
   }
@@ -366,7 +367,7 @@ const handleSend = async () => {
       Message.error(res.msg || res.message || '发送失败')
     }
   } catch (error) {
-    console.error('发送消息失败:', error)
+    log.error('发送消息失败:', error)
     Message.error('发送失败')
   } finally {
     sending.value = false
@@ -422,7 +423,7 @@ const handleDeleteConversation = (conv) => {
           Message.error(res.msg || res.message || '删除失败')
         }
       } catch (error) {
-        console.error('删除会话失败:', error)
+        log.error('删除会话失败:', error)
         Message.error('删除失败')
       }
     },

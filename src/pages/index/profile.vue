@@ -542,7 +542,8 @@ import {
 } from '@/apis/follows'
 import { getMyPosts } from '@/apis/posts'
 import { useUserStore } from '@/stores/user'
-import { renderMarkdown, stripMarkdown } from '@/utils/markdown'
+import { stripMarkdown } from '@/utils/markdown'
+import log from '@/utils/logger'
 import { getImageURL, getAvatarURL } from '@/config/server'
 import { usePageRefresh } from '@/composables/usePageRefresh'
 import { formatTimeAgo } from '@/utils/time'
@@ -723,7 +724,7 @@ const fetchStatPosts = async () => {
       statPostsPagination.total = res.data.totalRow || 0
     }
   } catch (error) {
-    console.error('获取用户帖子失败:', error)
+    log.error('获取用户帖子失败:', error)
   } finally {
     statPostsLoading.value = false
   }
@@ -747,7 +748,7 @@ const fetchFollowingList = async () => {
       })
     }
   } catch (error) {
-    console.error('获取关注列表失败:', error)
+    log.error('获取关注列表失败:', error)
   } finally {
     followingLoading.value = false
   }
@@ -764,7 +765,7 @@ const fetchFollowersList = async () => {
     if (res.code === 200) {
       followersList.value = res.data.records || []
       followersPagination.total = res.data.totalRow || 0
-      followersList.value.forEach(async (user) => {
+      for (const user of followersList.value) {
         if (followStatusMap[user.id] === undefined) {
           try {
             const checkRes = await checkFollowStatus(user.id)
@@ -775,10 +776,10 @@ const fetchFollowersList = async () => {
             followStatusMap[user.id] = false
           }
         }
-      })
+      }
     }
   } catch (error) {
-    console.error('获取粉丝列表失败:', error)
+    log.error('获取粉丝列表失败:', error)
   } finally {
     followersLoading.value = false
   }
@@ -819,7 +820,7 @@ const handleFollowToggle = async (user) => {
 const fetchUserInfo = async () => {
   try {
     const res = await getUserInfo()
-    console.log('获取用户信息返回:', res)
+    log.debug('获取用户信息返回:', res)
     if (res.code === 200) {
       const newGender = res.data.gender
       const newShowFollowing = res.data.showFollowing
@@ -865,7 +866,7 @@ const fetchUserInfo = async () => {
       }
     }
   } catch (error) {
-    console.error('获取用户信息失败:', error)
+    log.error('获取用户信息失败:', error)
   }
 }
 
@@ -881,7 +882,7 @@ const fetchFavoritePosts = async () => {
       favoritesPagination.total = res.data.totalRow || 0
     }
   } catch (error) {
-    console.error('获取收藏帖子失败:', error)
+    log.error('获取收藏帖子失败:', error)
   } finally {
     favoritesLoading.value = false
   }
@@ -918,9 +919,9 @@ const handleUpdateProfile = async () => {
     if (profileForm.gender) params.gender = profileForm.gender
     params.bio = profileForm.bio || ''
 
-    console.log('更新用户信息请求参数:', params)
+    log.debug('更新用户信息请求参数:', params)
     const res = await updateUserInfo(params)
-    console.log('更新用户信息响应:', res)
+    log.debug('更新用户信息响应:', res)
 
     if (res.code === 200) {
       Message.success('更新成功')
@@ -934,7 +935,7 @@ const handleUpdateProfile = async () => {
       Message.error(res.msg || res.message || '更新失败')
     }
   } catch (error) {
-    console.error('更新用户信息错误:', error)
+    log.error('更新用户信息错误:', error)
     Message.error('更新失败')
   } finally {
     updateLoading.value = false
@@ -943,11 +944,19 @@ const handleUpdateProfile = async () => {
 
 const resetProfileForm = () => {
   profileForm.username = userStore.username || ''
+  profileForm.email = userStore.userInfo?.email || ''
+  profileForm.age = userStore.userInfo?.age || null
+  profileForm.gender = userStore.userInfo?.gender || ''
   profileForm.bio = userInfo.value.bio || ''
 }
 
 const handleAvatarChange = async (_, currentFile) => {
   if (!currentFile || !currentFile.file) return
+
+  // 释放旧的 Blob URL
+  if (avatarFile.value?.url?.startsWith('blob:')) {
+    URL.revokeObjectURL(avatarFile.value.url)
+  }
 
   avatarFile.value = {
     ...currentFile,
@@ -956,11 +965,15 @@ const handleAvatarChange = async (_, currentFile) => {
 
   try {
     const res = await updateAvatar(currentFile.file)
-    console.log('上传头像接口返回:', res)
+    log.debug('上传头像接口返回:', res)
     if (res.code === 200) {
       Message.success('头像更新成功')
       userStore.updateUserInfo({ avatarUrl: res.data.avatarUrl })
       markForRefresh(`/user/${userStore.userId}`)
+      // 上传成功后释放 Blob URL
+      if (avatarFile.value?.url?.startsWith('blob:')) {
+        URL.revokeObjectURL(avatarFile.value.url)
+      }
       avatarFile.value = null
     } else {
       Message.error(res.message || '头像更新失败')
@@ -970,7 +983,7 @@ const handleAvatarChange = async (_, currentFile) => {
       }
     }
   } catch (error) {
-    console.error('上传头像错误:', error)
+    log.error('上传头像错误:', error)
     Message.error('头像上传失败')
     avatarFile.value = {
       ...avatarFile.value,
@@ -1036,9 +1049,9 @@ const handleSendCaptcha = async () => {
   }
   captchaLoading.value = true
   try {
-    console.log('发送验证码请求:', { type: 'changePassword' })
+    log.debug('发送验证码请求:', { type: 'changePassword' })
     const res = await getCaptcha(null, 'changePassword')
-    console.log('验证码响应:', res)
+    log.debug('验证码响应:', res)
     if (res.code === 200) {
       Message.success('验证码已发送')
       captchaCountdown.value = 60
@@ -1047,7 +1060,7 @@ const handleSendCaptcha = async () => {
       Message.error(res.msg || res.message || '发送失败')
     }
   } catch (error) {
-    console.error('验证码错误:', error)
+    log.error('验证码错误:', error)
     Message.error('发送失败')
   } finally {
     captchaLoading.value = false
@@ -1085,9 +1098,9 @@ const handleChangePassword = async ({ errors }) => {
       newPassword: passwordForm.newPassword,
       captcha: passwordForm.captcha,
     }
-    console.log('修改密码请求参数:', requestData)
+    log.debug('修改密码请求参数:', requestData)
     const res = await changePassword(requestData)
-    console.log('修改密码响应:', res)
+    log.debug('修改密码响应:', res)
     if (res.code === 200) {
       Message.success('密码修改成功，请重新登录')
       userStore.clearUser()
@@ -1096,7 +1109,7 @@ const handleChangePassword = async ({ errors }) => {
       Message.error(res.msg || res.message || '密码修改失败')
     }
   } catch (error) {
-    console.error('修改密码错误:', error)
+    log.error('修改密码错误:', error)
     Message.error('密码修改失败')
   } finally {
     passwordLoading.value = false
@@ -1129,7 +1142,7 @@ const handleDeleteAccount = async ({ errors }) => {
           Message.error(res.message || '提交注销申请失败')
         }
       } catch (error) {
-        console.error('注销账户错误:', error)
+        log.error('注销账户错误:', error)
         Message.error('注销账户失败')
       } finally {
         deleteAccountLoading.value = false
@@ -1155,7 +1168,7 @@ const handleCancelDeletion = async () => {
           Message.error(res.message || '撤销失败')
         }
       } catch (error) {
-        console.error('撤销注销错误:', error)
+        log.error('撤销注销错误:', error)
         Message.error('撤销注销失败')
       }
     },
@@ -1177,7 +1190,7 @@ const fetchDeletionStatus = async () => {
       deletionStatus.value = res.data
     }
   } catch (error) {
-    console.error('获取注销状态失败:', error)
+    log.error('获取注销状态失败:', error)
   }
 }
 
@@ -1198,7 +1211,7 @@ const handleBindGithub = async () => {
       githubBindLoading.value = false
     }
   } catch (error) {
-    console.error('绑定 GitHub 错误:', error)
+    log.error('绑定 GitHub 错误:', error)
     Message.error('获取授权链接失败')
     githubBindLoading.value = false
   }
@@ -1250,16 +1263,7 @@ const goToPost = (postId) => {
   router.push(`/post/${postId}`)
 }
 
-const formatTime = (time) => {
-  if (!time) return ''
-  return formatTimeAgo(time)
-}
-
-// Markdown 内容渲染
-const renderMarkdownContent = (content) => {
-  if (!content) return ''
-  return renderMarkdown(content)
-}
+const formatTime = formatTimeAgo
 
 // 去除 Markdown 标记获取纯文本摘要
 const stripMarkdownContent = (content, maxLength = 120) => {
@@ -1293,6 +1297,12 @@ const getFirstImage = (content) => {
   }
   return ''
 }
+
+onBeforeUnmount(() => {
+  if (avatarFile.value?.url?.startsWith('blob:')) {
+    URL.revokeObjectURL(avatarFile.value.url)
+  }
+})
 
 onMounted(() => {
   const initLoad = () => {

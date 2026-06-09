@@ -145,7 +145,7 @@ const fetchHistoryList = async () => {
       pagination.total = res.data.totalRow || 0
     }
   } catch (error) {
-    console.error('获取浏览历史失败:', error)
+    log.error('获取浏览历史失败:', error)
     Message.error('获取浏览历史失败')
   } finally {
     loading.value = false

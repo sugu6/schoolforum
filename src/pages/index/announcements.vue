@@ -70,6 +70,7 @@
 import { IconNotification } from '@arco-design/web-vue/es/icon'
 import { getAnnouncements, getAnnouncementDetail } from '@/apis/announcements'
 import { renderMarkdown } from '@/utils/markdown'
+import log from '@/utils/logger'
 
 definePage({
   meta: {
@@ -130,7 +131,7 @@ const fetchAnnouncements = async (reset = false) => {
       currentPage.value++
     }
   } catch (error) {
-    console.error('获取公告列表失败:', error)
+    log.error('获取公告列表失败:', error)
   } finally {
     loading.value = false
     loadingMore.value = false
@@ -151,7 +152,7 @@ const handleAnnouncementClick = async (announcement) => {
     const res = await getAnnouncementDetail(announcement.id)
     selectedAnnouncement.value = res?.data || res
   } catch (error) {
-    console.error('获取公告详情失败:', error)
+    log.error('获取公告详情失败:', error)
     selectedAnnouncement.value = null
   } finally {
     loadingDetail.value = false

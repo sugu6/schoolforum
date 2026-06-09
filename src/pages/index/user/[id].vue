@@ -226,6 +226,7 @@ import {
 } from '@/apis/follows'
 import { useUserStore } from '@/stores/user'
 import { usePageRefresh } from '@/composables/usePageRefresh'
+import log from '@/utils/logger'
 
 definePage({
   meta: {
@@ -365,7 +366,7 @@ const fetchUserInfo = async () => {
       }
     }
   } catch (error) {
-    console.error('获取用户信息失败:', error)
+    log.error('获取用户信息失败:', error)
     Message.error('获取用户信息失败')
   } finally {
     userLoading.value = false
@@ -399,7 +400,7 @@ const fetchUserPosts = async () => {
       pagination.total = res.data.totalRow || res.data.total || 0
     }
   } catch (error) {
-    console.error('获取用户帖子失败:', error)
+    log.error('获取用户帖子失败:', error)
   } finally {
     postsLoading.value = false
   }
@@ -441,7 +442,7 @@ const fetchFollowingList = async () => {
       }
     }
   } catch (error) {
-    console.error('获取关注列表失败:', error)
+    log.error('获取关注列表失败:', error)
   } finally {
     followingLoading.value = false
   }
@@ -465,7 +466,7 @@ const fetchFollowersList = async () => {
       followersPagination.total = res.data.totalRow || 0
     }
   } catch (error) {
-    console.error('获取粉丝列表失败:', error)
+    log.error('获取粉丝列表失败:', error)
   } finally {
     followersLoading.value = false
   }
@@ -502,7 +503,7 @@ const handleFollow = async () => {
       }
     }
   } catch (error) {
-    console.error('关注操作失败:', error)
+    log.error('关注操作失败:', error)
     Message.error('操作失败')
   } finally {
     followLoading.value = false
@@ -537,7 +538,7 @@ const handleFollowToggle = async (user) => {
       }
     }
   } catch (error) {
-    console.error('关注操作失败:', error)
+    log.error('关注操作失败:', error)
     Message.error('操作失败')
   }
 }

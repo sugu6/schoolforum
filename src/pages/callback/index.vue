@@ -78,8 +78,6 @@ const state = useRouteQuery('state')
 const error = useRouteQuery('error')
 const errorDescription = useRouteQuery('error_description')
 
-const token = useLocalStorage('token', '')
-
 const loading = ref(true)
 const errorMessage = ref('')
 const needConfirmUsername = ref(false)
@@ -89,6 +87,20 @@ const usernameForm = reactive({
   username: '',
 })
 const confirmLoading = ref(false)
+
+const handleAuthSuccess = (data) => {
+  const isLogin = !userStore.isLoggedIn
+  Message.success(isLogin ? 'GitHub 登录成功' : 'GitHub 绑定成功')
+  if (data.token) {
+    userStore.setToken(data.token)
+  }
+  if (data.user) {
+    userStore.setUserInfo(data.user)
+  } else {
+    userStore.fetchUserInfo()
+  }
+  router.replace(isLogin ? '/' : '/profile')
+}
 
 const handleCallback = async () => {
   if (error.value) {
@@ -105,7 +117,6 @@ const handleCallback = async () => {
 
   try {
     const res = await githubCallback(code.value, state.value)
-    console.log('GitHub 回调返回:', res)
 
     if (res.code === 200) {
       if (res.data.status === 'conflict') {
@@ -114,25 +125,13 @@ const handleCallback = async () => {
         usernameForm.username = res.data.suggestedUsername || ''
         loading.value = false
       } else {
-        const isLogin = !userStore.isLoggedIn
-        Message.success(isLogin ? 'GitHub 登录成功' : 'GitHub 绑定成功')
-        if (res.data.token) {
-          token.value = res.data.token
-          userStore.setToken(res.data.token)
-        }
-        if (res.data.user) {
-          userStore.setUserInfo(res.data.user)
-        } else {
-          userStore.fetchUserInfo()
-        }
-        router.replace(isLogin ? '/' : '/profile')
+        handleAuthSuccess(res.data)
       }
     } else {
       errorMessage.value = res.msg || res.message || '操作失败'
       loading.value = false
     }
   } catch (err) {
-    console.error('GitHub 回调错误:', err)
     errorMessage.value = '操作失败，请重试'
     loading.value = false
   }
@@ -154,26 +153,13 @@ const handleConfirmUsername = async () => {
       tempKey: tempKey.value,
       username: usernameForm.username,
     })
-    console.log('确认用户名返回:', res)
 
     if (res.code === 200) {
-      const isLogin = !userStore.isLoggedIn
-      Message.success(isLogin ? 'GitHub 登录成功' : 'GitHub 绑定成功')
-      if (res.data.token) {
-        token.value = res.data.token
-        userStore.setToken(res.data.token)
-      }
-      if (res.data.user) {
-        userStore.setUserInfo(res.data.user)
-      } else {
-        userStore.fetchUserInfo()
-      }
-      router.replace(isLogin ? '/' : '/profile')
+      handleAuthSuccess(res.data)
     } else {
       Message.error(res.msg || res.message || '操作失败')
     }
   } catch (err) {
-    console.error('确认用户名错误:', err)
     Message.error('操作失败，请重试')
   } finally {
     confirmLoading.value = false

@@ -200,6 +200,7 @@ import { checkFavorite } from '@/apis/favorites'
 import { renderMarkdown } from '@/utils/markdown'
 import { useUserStore } from '@/stores/user'
 import { usePageRefresh } from '@/composables/usePageRefresh'
+import log from '@/utils/logger'
 import { useRouteQuery } from '@vueuse/router'
 import { useIntersectionObserver } from '@vueuse/core'
 import { Message } from '@arco-design/web-vue'
@@ -303,7 +304,7 @@ const fetchHotPosts = async () => {
       }))
     }
   } catch (error) {
-    console.error('获取热门帖子失败:', error)
+    log.error('获取热门帖子失败:', error)
   }
 }
 
@@ -386,7 +387,7 @@ const fetchPostList = async (reset = false) => {
       }
     }
   } catch (error) {
-    console.error('获取帖子列表失败:', error)
+    log.error('获取帖子列表失败:', error)
     noMore.value = true
   } finally {
     loading.value = false
@@ -402,12 +403,12 @@ const checkPostsFavoriteStatus = async (posts) => {
           post.isFavorited = res.data?.isFavorited === true || res.data === true
         }
       } catch (error) {
-        console.error(`检查帖子 ${post.id} 收藏状态失败:`, error)
+        log.error(`检查帖子 ${post.id} 收藏状态失败:`, error)
       }
     })
     await Promise.all(favoritePromises)
   } catch (error) {
-    console.error('批量检查收藏状态失败:', error)
+    log.error('批量检查收藏状态失败:', error)
   }
 }
 
@@ -424,7 +425,7 @@ const fetchCategories = async () => {
       updateSelectedKeys()
     }
   } catch (error) {
-    console.error('获取分类失败:', error)
+    log.error('获取分类失败:', error)
   }
 }
 

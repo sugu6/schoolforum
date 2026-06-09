@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getUserInfo } from '@/apis/users'
 import { getAvatarURL } from '@/config/server'
+import log from '@/utils/logger'
 
 export const useUserStore = defineStore('user', () => {
   const userInfo = ref(null)
@@ -56,22 +57,25 @@ export const useUserStore = defineStore('user', () => {
         userInfo.value = res.data
       }
     } catch (error) {
-      console.error('获取用户信息失败:', error)
+      log.error('获取用户信息失败:', error)
     }
   }
 
   const initFromStorage = () => {
     const localToken = localStorage.getItem('token')
     const sessionToken = sessionStorage.getItem('token')
+    const storage = localToken ? localStorage : sessionToken ? sessionStorage : null
 
-    if (localToken) {
-      token.value = localToken
-      const info = localStorage.getItem('userInfo')
-      userInfo.value = info ? JSON.parse(info) : null
-    } else if (sessionToken) {
-      token.value = sessionToken
-      const info = sessionStorage.getItem('userInfo')
-      userInfo.value = info ? JSON.parse(info) : null
+    if (storage) {
+      token.value = localToken || sessionToken
+      const info = storage.getItem('userInfo')
+      try {
+        userInfo.value = info ? JSON.parse(info) : null
+      } catch {
+        userInfo.value = null
+        localStorage.removeItem('userInfo')
+        sessionStorage.removeItem('userInfo')
+      }
     }
   }
 

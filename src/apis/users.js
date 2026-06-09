@@ -38,6 +38,11 @@ export function getCaptcha(email, type = 'register') {
   return alova.Get('/users/captcha', { params })
 }
 
+/** 验证验证码 */
+export function verifyCaptcha(data) {
+  return alova.Post('/users/verifyCaptcha', null, { params: data })
+}
+
 /** 重置密码 */
 export function resetPassword(data) {
   return alova.Post('/users/resetPassword', null, { params: data })

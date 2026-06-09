@@ -1,4 +1,4 @@
-﻿<template>
+﻿﻿<template>
   <a-card class="author-card sidebar-card" :bordered="true" :loading="loading">
     <div v-if="!loading && authorInfo.id" class="author-profile">
       <a-avatar :size="64" class="profile-avatar">
@@ -55,6 +55,7 @@ import {
   checkFollowStatus,
 } from '@/apis/follows'
 import { useUserStore } from '@/stores/user'
+import log from '@/utils/logger'
 import { getAvatarURL } from '@/config/server'
 
 const router = useRouter()
@@ -122,7 +123,7 @@ const fetchAuthorInfo = async () => {
       }
     }
   } catch (error) {
-    console.error('获取作者信息失败:', error)
+    log.error('获取作者信息失败:', error)
   } finally {
     loading.value = false
   }
@@ -160,7 +161,7 @@ const handleFollowToggle = async () => {
       }
     }
   } catch (error) {
-    console.error('关注操作失败:', error)
+    log.error('关注操作失败:', error)
     Message.error('操作失败')
   } finally {
     followLoading.value = false
@@ -176,12 +177,6 @@ watch(
   },
   { immediate: true },
 )
-
-onMounted(() => {
-  if (props.authorId) {
-    fetchAuthorInfo()
-  }
-})
 </script>
 
 <style lang="scss" scoped>

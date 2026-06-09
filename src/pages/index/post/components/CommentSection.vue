@@ -50,6 +50,7 @@ import {
 } from '@/apis/comments'
 import CommentInput from './CommentInput.vue'
 import CommentList from './CommentList.vue'
+import log from '@/utils/logger'
 
 const props = defineProps({
   postId: {
@@ -74,7 +75,10 @@ const replyContent = ref('')
 const submitting = ref(false)
 const replying = ref(false)
 
-let localTotalComments = props.totalComments
+const localTotalComments = ref(props.totalComments)
+watch(() => props.totalComments, (newVal) => {
+  localTotalComments.value = newVal
+})
 const countRef = ref(null)
 
 const fetchComments = async () => {
@@ -88,14 +92,14 @@ const fetchComments = async () => {
       const commentList = Array.isArray(res.data) ? res.data : res.data.list || []
       if (commentPage.value === 1) {
         comments.value = commentList
-        localTotalComments = res.data.total || 0
+        localTotalComments.value = res.data.total || 0
       } else {
         comments.value.push(...commentList)
       }
       hasMoreComments.value = res.data.hasMore || false
     }
   } catch (error) {
-    console.error('获取评论失败:', error)
+    log.error('获取评论失败:', error)
   } finally {
     loadingComments.value = false
   }
@@ -130,14 +134,14 @@ const handleSubmitComment = async (content) => {
         replies: [],
       }
       comments.value.unshift(newComment)
-      localTotalComments += 1
+      localTotalComments.value += 1
       commentInputRef.value?.clear()
       emit('comment-change', { type: 'add' })
     } else {
       Message.error(res.message || '评论发表失败')
     }
   } catch (error) {
-    console.error('评论请求异常:', error)
+    log.error('评论请求异常:', error)
     Message.error('评论发表失败')
   } finally {
     submitting.value = false
@@ -202,7 +206,7 @@ const submitReply = async (target, content) => {
       cancelReply()
       commentPage.value = 1
       fetchComments()
-      localTotalComments += 1
+      localTotalComments.value += 1
       emit('comment-change', { type: 'add' })
     } else {
       Message.error(res.message || '回复失败')
@@ -282,7 +286,7 @@ const handleDeleteComment = async (comment) => {
       } else {
         comments.value = comments.value.filter((c) => c.id !== comment.id)
       }
-      localTotalComments = Math.max(0, localTotalComments - 1)
+      localTotalComments.value = Math.max(0, localTotalComments.value - 1)
       emit('comment-change', { type: 'delete' })
     } else {
       Message.error(res.message || '删除失败')
@@ -306,7 +310,7 @@ const handleDeleteReply = async ({ parent, reply }) => {
           comments.value = comments.value.filter((c) => c.id !== parent.id)
         }
       }
-      localTotalComments = Math.max(0, localTotalComments - 1)
+      localTotalComments.value = Math.max(0, localTotalComments.value - 1)
       emit('comment-change', { type: 'delete' })
     } else {
       Message.error(res.message || '删除失败')
@@ -325,7 +329,7 @@ const handleDeleteSubReply = async ({ rootComment, parent, subReply }) => {
         subReply.deleted = true
         subReply.content = '该评论已删除'
       } else {
-        reply.replies = reply.replies.filter((r) => r.id !== subReply.id)
+        parent.replies = parent.replies.filter((r) => r.id !== subReply.id)
         if (parent.deleted && (!parent.replies?.length || parent.replies.every((r) => r.deleted))) {
           rootComment.replies = rootComment.replies.filter((r) => r.id !== parent.id)
           if (
@@ -336,7 +340,7 @@ const handleDeleteSubReply = async ({ rootComment, parent, subReply }) => {
           }
         }
       }
-      localTotalComments = Math.max(0, localTotalComments - 1)
+      localTotalComments.value = Math.max(0, localTotalComments.value - 1)
       emit('comment-change', { type: 'delete' })
     } else {
       Message.error(res.message || '删除失败')
@@ -358,7 +362,7 @@ watch(
 )
 
 watch(
-  () => localTotalComments,
+  () => localTotalComments.value,
   (newVal, oldVal) => {
     if (newVal !== oldVal && countRef.value) {
       countRef.value.classList.add('bounce')

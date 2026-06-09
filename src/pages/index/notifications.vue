@@ -90,6 +90,7 @@ import {
 import { useNotificationStore } from '@/stores/notification'
 import { useUserStore } from '@/stores/user'
 import { formatTimeAgo } from '@/utils/time'
+import log from '@/utils/logger'
 
 definePage({
   meta: {
@@ -130,7 +131,7 @@ const fetchNotifications = async () => {
     notifications.value = notificationStore.notifications
     pagination.total = notificationStore.total
   } catch (error) {
-    console.error('获取通知列表失败:', error)
+    log.error('获取通知列表失败:', error)
     Message.error('获取通知列表失败')
   } finally {
     loading.value = false

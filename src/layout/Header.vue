@@ -212,6 +212,7 @@ import { logout } from '@/apis/users.js'
 import { getCategoryList } from '@/apis/categories.js'
 import { searchSuggest } from '@/apis/search.js'
 import { formatTimeAgo } from '@/utils/time'
+import log from '@/utils/logger'
 
 const themeStore = useThemeStore()
 const userStore = useUserStore()
@@ -326,7 +327,7 @@ const fetchCategories = async () => {
       initSelectedKeys()
     }
   } catch (error) {
-    console.error('获取分类失败:', error)
+    log.error('获取分类失败:', error)
   }
 }
 
@@ -403,6 +404,7 @@ watch(
 
 onUnmounted(() => {
   notificationStore.disconnectSSE()
+  messageStore.disconnectWebSocket()
 })
 
 const formatTime = formatTimeAgo
@@ -452,7 +454,7 @@ const handleLogout = async () => {
   try {
     await logout()
   } catch (error) {
-    console.error('退出登录接口错误:', error)
+    log.error('退出登录接口错误:', error)
   }
   userStore.clearUser()
   Message.success('已退出登录')

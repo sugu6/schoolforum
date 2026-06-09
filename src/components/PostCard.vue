@@ -5,20 +5,20 @@
       <a-popover trigger="hover" position="bottom" :popup-visible="popoverVisible"
         @popup-visible-change="handlePopoverChange" :content-style="{ padding: '0' }"
         :arrow-style="{ display: 'none' }">
-        <a-avatar :size="isDetailMode ? 40 : 40" class="author-avatar">
-          <img v-if="getAvatarURL(post.authorAvatar)" :src="getAvatarURL(post.authorAvatar)" />
+        <a-avatar :size="40" class="author-avatar">
+          <img v-if="getAvatarURL(localPost.authorAvatar)" :src="getAvatarURL(localPost.authorAvatar)" />
           <icon-user v-else />
         </a-avatar>
         <template #content>
           <div class="author-popover" @click.stop>
             <div class="popover-header">
               <a-avatar :size="64" class="popover-avatar">
-                <img v-if="getAvatarURL(post.authorAvatar)" :src="getAvatarURL(post.authorAvatar)" />
+                <img v-if="getAvatarURL(localPost.authorAvatar)" :src="getAvatarURL(localPost.authorAvatar)" />
                 <icon-user v-else />
               </a-avatar>
               <div class="popover-user-info">
                 <span class="popover-username">
-                  {{ post.authorName }}
+                  {{ localPost.authorName }}
                   <IconMan v-if="authorGender === 'MALE'" class="gender-icon male" />
                   <IconWoman v-else-if="authorGender === 'FEMALE'" class="gender-icon female" />
                 </span>
@@ -59,12 +59,12 @@
         </template>
       </a-popover>
       <div class="post-meta">
-        <span class="author-name">{{ post.authorName }}</span>
+        <span class="author-name">{{ localPost.authorName }}</span>
         <span class="post-time">
-          <template v-if="post.updatedAt && post.updatedAt !== post.createdAt">
-            更新于 {{ formatTime(post.updatedAt) }}
+          <template v-if="localPost.updatedAt && localPost.updatedAt !== localPost.createdAt">
+            更新于 {{ formatTime(localPost.updatedAt) }}
           </template>
-          <template v-else> 发布于 {{ formatTime(post.createdAt) }} </template>
+          <template v-else> 发布于 {{ formatTime(localPost.createdAt) }} </template>
           <a-tag v-if="displayTags && displayTags.length" v-for="tag in displayTags" :key="tag" color="blue"
             size="small" class="inline-tag">
             {{ tag }}
@@ -84,38 +84,36 @@
       <template v-if="isDetailMode">
         <div ref="contentRef" class="post-content-detail markdown-body" v-html="renderedContent"></div>
       </template>
-      <template v-else>
-        <p class="post-content">{{ contentSummary }}</p>
-      </template>
+      <p v-else class="post-content">{{ contentSummary }}</p>
     </div>
 
     <div v-if="coverImageUrl && !isDetailMode" class="post-images">
       <img :src="coverImageUrl" class="post-image" @click.stop="openImagePreview" />
     </div>
 
-    <div v-if="isDetailMode && post.coverImage" class="post-bottom-section">
+    <div v-if="isDetailMode && localPost.coverImage" class="post-bottom-section">
       <div class="post-images">
         <img :src="coverImageUrl" class="post-image" @click.stop="openImagePreview" />
       </div>
-      <div class="post-publish-time">发布于 {{ formatDateTime(post.createdAt) }}</div>
+      <div class="post-publish-time">发布于 {{ formatDateTime(localPost.createdAt) }}</div>
     </div>
 
     <ImagePreview ref="imagePreviewRef" :images="previewImages" />
 
     <div class="post-footer">
       <div class="post-stats">
-        <span><icon-eye /> {{ post.viewCount || 0 }}</span>
-        <span><icon-message /> {{ post.commentCount || 0 }}</span>
+        <span><icon-eye /> {{ localPost.viewCount || 0 }}</span>
+        <span><icon-message /> {{ localPost.commentCount || 0 }}</span>
         <span class="like-btn" :class="{ active: postIsLiked, 'animate-heart-pop': likeAnimating }" @click="handleLike">
           <icon-thumb-up-fill v-if="postIsLiked" class="like-icon" />
           <icon-thumb-up v-else class="like-icon" />
-          <span class="like-count">{{ post.likeCount || 0 }}</span>
+          <span class="like-count">{{ localLikeCount }}</span>
         </span>
         <span class="favorite-btn" :class="{ active: postIsFavorited, 'animate-star-spin': favoriteAnimating }"
           @click="handleFavorite">
           <icon-star-fill v-if="postIsFavorited" class="favorite-icon" />
           <icon-star v-else class="favorite-icon" />
-          <span class="favorite-count">{{ post.favoriteCount || 0 }}</span>
+          <span class="favorite-count">{{ localFavoriteCount }}</span>
         </span>
       </div>
     </div>
@@ -123,7 +121,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   IconEye,
@@ -137,7 +135,7 @@ import {
   IconWoman,
 } from '@arco-design/web-vue/es/icon'
 import { getAvatarURL, getImageURL } from '@/config/server'
-import { stripMarkdown, extractImages, renderMarkdownAsync } from '@/utils/markdown'
+import { stripMarkdown, extractImages, renderMarkdownAsync, escapeHtml } from '@/utils/markdown'
 import { getUserInfoById, getUserPosts } from '@/apis/users'
 import { likePost, unlikePost, favoritePost, unfavoritePost } from '@/apis/posts'
 import {
@@ -150,6 +148,7 @@ import {
 import { useUserStore } from '@/stores/user'
 import { Message } from '@arco-design/web-vue'
 import ImagePreview from './ImagePreview.vue'
+import log from '@/utils/logger'
 
 const props = defineProps({
   post: {
@@ -171,6 +170,11 @@ const emit = defineEmits(['content-rendered'])
 
 const router = useRouter()
 const userStore = useUserStore()
+
+const localPost = reactive({ ...props.post })
+watch(() => props.post, (newPost) => {
+  Object.assign(localPost, newPost)
+}, { deep: true })
 
 const isDetailMode = computed(() => props.mode === 'detail')
 
@@ -210,30 +214,33 @@ const contentRef = ref(null)
 const renderedContent = ref('')
 const markdownImages = ref([])
 
+const localLikeCount = computed(() => localPost.likeCount || 0)
+const localFavoriteCount = computed(() => localPost.favoriteCount || 0)
+
 const getTagColor = (category) => {
   return categoryColorMap[category] || 'gray'
 }
 
 const isPinned = computed(() => {
-  return props.post.isPinned === 'PINNED' || props.post.isPinned === 1
+  return localPost.isPinned === 'PINNED' || localPost.isPinned === 1
 })
 
 const isEssential = computed(() => {
-  return props.post.isEssential === 'ESSENTIAL' || props.post.isEssential === 1
+  return localPost.isEssential === 'ESSENTIAL' || localPost.isEssential === 1
 })
 
 const isCurrentUser = computed(() => {
   return (
     userStore.userId &&
-    props.post.authorId &&
-    String(userStore.userId) === String(props.post.authorId)
+    localPost.authorId &&
+    String(userStore.userId) === String(localPost.authorId)
   )
 })
 
 const postIsLiked = computed({
   get: () => {
-    if (props.post.isLiked !== undefined) {
-      return props.post.isLiked
+    if (localPost.isLiked !== undefined) {
+      return localPost.isLiked
     }
     return isLiked.value
   },
@@ -244,8 +251,8 @@ const postIsLiked = computed({
 
 const postIsFavorited = computed({
   get: () => {
-    if (props.post.isFavorited !== undefined) {
-      return props.post.isFavorited
+    if (localPost.isFavorited !== undefined) {
+      return localPost.isFavorited
     }
     return isFavorited.value
   },
@@ -255,15 +262,15 @@ const postIsFavorited = computed({
 })
 
 const displayTags = computed(() => {
-  if (props.post.tagNames && props.post.tagNames.length) {
-    return props.post.tagNames
+  if (localPost.tagNames && localPost.tagNames.length) {
+    return localPost.tagNames
   }
-  if (props.post.tags) {
-    if (Array.isArray(props.post.tags)) {
-      return props.post.tags
+  if (localPost.tags) {
+    if (Array.isArray(localPost.tags)) {
+      return localPost.tags
     }
-    if (typeof props.post.tags === 'string' && props.post.tags.trim()) {
-      return props.post.tags
+    if (typeof localPost.tags === 'string' && localPost.tags.trim()) {
+      return localPost.tags
         .split(',')
         .map((t) => t.trim())
         .filter(Boolean)
@@ -273,11 +280,11 @@ const displayTags = computed(() => {
 })
 
 const displayCategoryName = computed(() => {
-  return props.post.categoryName || props.post.category || ''
+  return localPost.categoryName || localPost.category || ''
 })
 
 const displayParentCategory = computed(() => {
-  return props.post.parentCategoryName || ''
+  return localPost.parentCategoryName || ''
 })
 
 const formatTime = (timeStr) => {
@@ -308,21 +315,23 @@ const formatDateTime = (time) => {
 }
 
 const contentSummary = computed(() => {
-  return props.post.contentSummary || stripMarkdown(props.post.content, 150)
+  return localPost.contentSummary || stripMarkdown(localPost.content, 150)
 })
 
 const highlightedTitle = computed(() => {
-  if (!props.highlightKeyword || !props.post.title) return props.post.title
+  if (!props.highlightKeyword || !localPost.title) return escapeHtml(localPost.title || '')
+  const escaped = escapeHtml(localPost.title)
+  const escapedKeyword = escapeHtml(props.highlightKeyword)
   const regex = new RegExp(
-    `(${props.highlightKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`,
+    `(${escapedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`,
     'gi',
   )
-  return props.post.title.replace(regex, '<mark class="highlight">$1</mark>')
+  return escaped.replace(regex, '<mark class="highlight">$1</mark>')
 })
 
 const coverImageUrl = computed(() => {
-  if (props.post.coverImage) {
-    let imageUrl = props.post.coverImage.trim()
+  if (localPost.coverImage) {
+    let imageUrl = localPost.coverImage.trim()
     if (imageUrl.startsWith('`') && imageUrl.endsWith('`')) {
       imageUrl = imageUrl.slice(1, -1).trim()
     }
@@ -331,7 +340,7 @@ const coverImageUrl = computed(() => {
     }
     return getImageURL(imageUrl)
   }
-  const images = extractImages(props.post.content, 1)
+  const images = extractImages(localPost.content, 1)
   if (images.length > 0) {
     return images[0].url
   }
@@ -341,8 +350,8 @@ const coverImageUrl = computed(() => {
 const previewImages = computed(() => {
   const images = []
   // 优先使用 coverImage，否则使用从内容提取的封面图
-  if (props.post.coverImage) {
-    images.push(getImageURL(props.post.coverImage))
+  if (localPost.coverImage) {
+    images.push(getImageURL(localPost.coverImage))
   } else if (coverImageUrl.value) {
     images.push(coverImageUrl.value)
   }
@@ -362,20 +371,20 @@ const openImagePreview = () => {
 
 const handlePopoverChange = async (visible) => {
   popoverVisible.value = visible
-  if (visible && props.post.authorId) {
+  if (visible && localPost.authorId) {
     await fetchAuthorInfo()
   }
 }
 
 const fetchAuthorInfo = async () => {
-  if (!props.post.authorId) return
+  if (!localPost.authorId) return
   try {
     if (!userInfoLoaded.value) {
       const [userRes, postsRes, followingRes, followersRes] = await Promise.all([
-        getUserInfoById(props.post.authorId),
-        getUserPosts(props.post.authorId, { pageNumber: 1, pageSize: 1 }),
-        getFollowingList(props.post.authorId, { pageNumber: 1, pageSize: 1 }),
-        getFollowersList(props.post.authorId, { pageNumber: 1, pageSize: 1 }),
+        getUserInfoById(localPost.authorId),
+        getUserPosts(localPost.authorId, { pageNumber: 1, pageSize: 1 }),
+        getFollowingList(localPost.authorId, { pageNumber: 1, pageSize: 1 }),
+        getFollowersList(localPost.authorId, { pageNumber: 1, pageSize: 1 }),
       ])
 
       if (userRes.code === 200 && userRes.data) {
@@ -408,13 +417,13 @@ const fetchAuthorInfo = async () => {
     }
 
     if (userStore.isLoggedIn && !isCurrentUser.value) {
-      const followRes = await checkFollowStatus(props.post.authorId)
+      const followRes = await checkFollowStatus(localPost.authorId)
       if (followRes.code === 200) {
         isFollowed.value = followRes.data?.isFollowing === true
       }
     }
   } catch (error) {
-    console.error('获取作者信息失败:', error)
+    log.error('获取作者信息失败:', error)
   }
 }
 
@@ -429,7 +438,7 @@ const handleFollow = async () => {
   followLoading.value = true
   try {
     if (isFollowed.value) {
-      const res = await unfollowUser(props.post.authorId)
+      const res = await unfollowUser(localPost.authorId)
       if (res.code === 200) {
         isFollowed.value = false
         authorStats.value.followerCount = Math.max(0, authorStats.value.followerCount - 1)
@@ -438,7 +447,7 @@ const handleFollow = async () => {
         Message.error(res.msg || res.message || '操作失败')
       }
     } else {
-      const res = await followUser(props.post.authorId)
+      const res = await followUser(localPost.authorId)
       if (res.code === 200) {
         isFollowed.value = true
         authorStats.value.followerCount += 1
@@ -448,7 +457,7 @@ const handleFollow = async () => {
       }
     }
   } catch (error) {
-    console.error('关注操作失败:', error)
+    log.error('关注操作失败:', error)
     Message.error('操作失败')
   } finally {
     followLoading.value = false
@@ -462,23 +471,30 @@ const handlePrivateMessage = () => {
     return
   }
   router.push(
-    `/chat?userId=${props.post.authorId}&username=${encodeURIComponent(props.post.authorName)}`,
+    `/chat?userId=${localPost.authorId}&username=${encodeURIComponent(localPost.authorName)}`,
   )
 }
 
 const goToUserPage = (tab = 'posts') => {
-  if (!props.post.authorId) return
-  router.push(`/user/${props.post.authorId}?tab=${tab}`)
+  if (!localPost.authorId) return
+  router.push(`/user/${localPost.authorId}?tab=${tab}`)
 }
 
 const handleCardClick = () => {
   if (!isDetailMode.value) {
-    router.push(`/post/${props.post.id}`)
+    router.push(`/post/${localPost.id}`)
   }
 }
 
 const setupImagePreview = () => {
   if (!contentRef.value) return
+
+  // 清理之前创建的图片预览容器
+  const existingContainers = contentRef.value.querySelectorAll('.markdown-images')
+  existingContainers.forEach(container => container.remove())
+  // 恢复之前隐藏的原始图片
+  const hiddenImages = contentRef.value.querySelectorAll('img[style*="display: none"]')
+  hiddenImages.forEach(img => img.style.display = '')
 
   const images = contentRef.value.querySelectorAll('img')
   const imgUrls = []
@@ -502,57 +518,30 @@ const setupImagePreview = () => {
     }
   })
 
-  // 如果有多张图片，用网格容器包裹
-  if (images.length > 1) {
+  // 用网格容器包裹图片（单张和多张统一处理）
+  if (images.length > 0) {
     const imagesContainer = document.createElement('div')
     imagesContainer.className = 'post-images markdown-images'
 
-    // 先隐藏所有原始图片
-    images.forEach((img) => {
-      img.style.display = 'none'
-    })
+    const coverImageCount = localPost.coverImage ? 1 : 0
 
-    // 创建新的图片元素放入容器
     images.forEach((img, index) => {
+      // 隐藏原始图片
+      img.style.display = 'none'
+
+      // 创建新的图片元素放入容器
       const newImg = document.createElement('img')
       newImg.src = img.getAttribute('src')
       newImg.className = 'post-image'
       newImg.style.cursor = 'pointer'
       newImg.addEventListener('click', (e) => {
         e.stopPropagation()
-        const coverImageCount = props.post.coverImage ? 1 : 0
-        const imageIndex = coverImageCount + index
         if (imagePreviewRef.value) {
-          imagePreviewRef.value.open(imageIndex)
+          imagePreviewRef.value.open(coverImageCount + index)
         }
       })
       imagesContainer.appendChild(newImg)
     })
-
-    contentRef.value.appendChild(imagesContainer)
-  } else if (images.length === 1) {
-    // 单张图片也使用 post-images 容器，保持和封面图一致
-    const img = images[0]
-    const imagesContainer = document.createElement('div')
-    imagesContainer.className = 'post-images markdown-images'
-
-    // 隐藏原始图片
-    img.style.display = 'none'
-
-    // 创建新的图片元素
-    const newImg = document.createElement('img')
-    newImg.src = img.getAttribute('src')
-    newImg.className = 'post-image'
-    newImg.style.cursor = 'pointer'
-    newImg.addEventListener('click', (e) => {
-      e.stopPropagation()
-      const coverImageCount = props.post.coverImage ? 1 : 0
-      const imageIndex = coverImageCount
-      if (imagePreviewRef.value) {
-        imagePreviewRef.value.open(imageIndex)
-      }
-    })
-    imagesContainer.appendChild(newImg)
 
     contentRef.value.appendChild(imagesContainer)
   }
@@ -561,11 +550,11 @@ const setupImagePreview = () => {
 }
 
 watch(
-  () => props.post.content,
+  () => localPost.content,
   async (newContent) => {
     if (isDetailMode.value && newContent) {
       // 将标题添加到 Markdown 内容开头，以便目录能提取到
-      const title = props.post.title
+      const title = localPost.title
       const contentWithTitle = title ? `# ${title}\n\n${newContent}` : newContent
       renderedContent.value = await renderMarkdownAsync(contentWithTitle)
       await nextTick()
@@ -588,24 +577,24 @@ const handleLike = async (event) => {
   likeLoading.value = true
   try {
     if (postIsLiked.value) {
-      const res = await unlikePost(props.post.id)
+      const res = await unlikePost(localPost.id)
       if (res.code === 200) {
         postIsLiked.value = false
-        props.post.likeCount = Math.max(0, (props.post.likeCount || 1) - 1)
+        localPost.likeCount = Math.max(0, (localPost.likeCount || 1) - 1)
       } else {
         Message.error(res.msg || res.message || '操作失败')
       }
     } else {
-      const res = await likePost(props.post.id)
+      const res = await likePost(localPost.id)
       if (res.code === 200) {
         postIsLiked.value = true
-        props.post.likeCount = (props.post.likeCount || 0) + 1
+        localPost.likeCount = (localPost.likeCount || 0) + 1
       } else {
         Message.error(res.msg || res.message || '操作失败')
       }
     }
   } catch (error) {
-    console.error('点赞操作失败:', error)
+    log.error('点赞操作失败:', error)
     Message.error('操作失败')
   } finally {
     likeLoading.value = false
@@ -630,26 +619,26 @@ const handleFavorite = async (event) => {
   favoriteLoading.value = true
   try {
     if (postIsFavorited.value) {
-      const res = await unfavoritePost(props.post.id)
+      const res = await unfavoritePost(localPost.id)
       if (res.code === 200) {
         postIsFavorited.value = false
-        props.post.favoriteCount = Math.max(0, (props.post.favoriteCount || 1) - 1)
+        localPost.favoriteCount = Math.max(0, (localPost.favoriteCount || 1) - 1)
         Message.success('已取消收藏')
       } else {
         Message.error(res.msg || res.message || '操作失败')
       }
     } else {
-      const res = await favoritePost(props.post.id)
+      const res = await favoritePost(localPost.id)
       if (res.code === 200) {
         postIsFavorited.value = true
-        props.post.favoriteCount = (props.post.favoriteCount || 0) + 1
+        localPost.favoriteCount = (localPost.favoriteCount || 0) + 1
         Message.success('收藏成功')
       } else {
         Message.error(res.msg || res.message || '操作失败')
       }
     }
   } catch (error) {
-    console.error('收藏操作失败:', error)
+    log.error('收藏操作失败:', error)
     Message.error('操作失败')
   } finally {
     favoriteLoading.value = false

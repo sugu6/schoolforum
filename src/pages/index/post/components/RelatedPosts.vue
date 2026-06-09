@@ -31,6 +31,7 @@
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { IconFire, IconEye, IconMessage } from '@arco-design/web-vue/es/icon'
+import log from '@/utils/logger'
 
 const props = defineProps({
   postId: {
@@ -56,7 +57,7 @@ const fetchRelatedPosts = async () => {
       }
     }
   } catch (error) {
-    console.error('获取相关推荐失败:', error)
+    log.error('获取相关推荐失败:', error)
   } finally {
     loading.value = false
   }

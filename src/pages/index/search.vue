@@ -172,6 +172,8 @@ import { IconSearch, IconUser, IconApps, IconFile, IconRight } from '@arco-desig
 import { searchAll } from '@/apis/search'
 import PostCard from '@/components/PostCard.vue'
 import { getAvatarURL } from '@/config/server'
+import { escapeHtml } from '@/utils/markdown'
+import log from '@/utils/logger'
 
 definePage({
   meta: {
@@ -219,9 +221,10 @@ const totalResults = computed(() => {
 })
 
 const highlightText = (text, query) => {
-  if (!text || !query) return text
+  if (!text || !query) return escapeHtml(text || '')
+  const escaped = escapeHtml(text)
   const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
-  return text.replace(regex, '<mark class="highlight">$1</mark>')
+  return escaped.replace(regex, '<mark class="highlight">$1</mark>')
 }
 
 const doSearch = async () => {
@@ -246,7 +249,7 @@ const doSearch = async () => {
 
     router.replace({ query: { q, type: searchType.value } })
   } catch (error) {
-    console.error('搜索失败:', error)
+    log.error('搜索失败:', error)
   } finally {
     loading.value = false
   }

@@ -47,7 +47,7 @@
         >
           <IconHighlight />
         </button>
-        <div v-if="highlightPickerVisible" class="color-picker">
+        <div v-if="highlightPickerVisible" ref="highlightPickerRef" class="color-picker">
           <button
             type="button"
             class="color-btn remove-highlight"
@@ -219,6 +219,7 @@
 
     <EmojiPicker
       v-if="emojiPickerVisible"
+      ref="emojiPickerRef"
       @select="insertEmoji"
       @click-outside="emojiPickerVisible = false"
     />
@@ -280,6 +281,8 @@ const emit = defineEmits(['update:modelValue', 'image-upload'])
 const imageInputRef = ref(null)
 const emojiPickerVisible = ref(false)
 const highlightPickerVisible = ref(false)
+const highlightPickerRef = ref(null)
+const emojiPickerRef = ref(null)
 
 const highlightColors = [
   '#fff3cd',
@@ -445,16 +448,12 @@ watch(
   },
 )
 
-onClickOutside(highlightPickerVisible, (event) => {
-  if (!event.target.closest('.color-picker') && !event.target.closest('.toolbar-btn-group')) {
-    highlightPickerVisible.value = false
-  }
+onClickOutside(highlightPickerRef, () => {
+  highlightPickerVisible.value = false
 })
 
-onClickOutside(emojiPickerVisible, (event) => {
-  if (!event.target.closest('.emoji-picker') && !event.target.closest('.toolbar-btn')) {
-    emojiPickerVisible.value = false
-  }
+onClickOutside(emojiPickerRef, () => {
+  emojiPickerVisible.value = false
 })
 
 onBeforeUnmount(() => {

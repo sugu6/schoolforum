@@ -42,6 +42,7 @@ import { getPostDetail } from '@/apis/posts'
 import { addBrowseHistory } from '@/apis/browseHistory'
 import { extractHeadingsFromDOM } from '@/utils/markdown'
 import { usePageRefresh } from '@/composables/usePageRefresh'
+import log from '@/utils/logger'
 import { useUserStore } from '@/stores/user'
 import PostCard from '@/components/PostCard.vue'
 import TableOfContents from '@/components/TableOfContents.vue'
@@ -75,7 +76,7 @@ const fetchPostDetail = async () => {
         try {
           await addBrowseHistory(postId.value)
         } catch (error) {
-          console.error('添加浏览历史失败:', error)
+          log.error('添加浏览历史失败:', error)
         }
       }
     } else {
@@ -83,7 +84,7 @@ const fetchPostDetail = async () => {
       router.push('/')
     }
   } catch (error) {
-    console.error('获取帖子详情失败:', error)
+    log.error('获取帖子详情失败:', error)
     Message.error('获取帖子详情失败')
     router.push('/')
   } finally {
@@ -143,12 +144,22 @@ const fetchPostUpdate = async () => {
       totalComments.value = res.data.commentCount || 0
     }
   } catch (error) {
-    console.error('轮询刷新失败:', error)
+    log.error('轮询刷新失败:', error)
   }
 }
 
 const { pause: pausePolling, resume: resumePolling } = useIntervalFn(fetchPostUpdate, 30000, {
   immediate: false,
+})
+
+// 页面不可见时暂停轮询，可见时恢复
+const documentVisibility = useDocumentVisibility()
+watch(documentVisibility, (visibility) => {
+  if (visibility === 'hidden') {
+    pausePolling()
+  } else if (visibility === 'visible' && postId.value) {
+    resumePolling()
+  }
 })
 
 // 监听帖子 ID 变化

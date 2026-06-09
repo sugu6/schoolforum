@@ -13,6 +13,7 @@ import {
 import { useRealtimeConnection } from '@/composables/useRealtimeConnection'
 import { createSSEConnection } from '@/utils/sseAdapter'
 import { getSSEURL } from '@/config/server'
+import log from '@/utils/logger'
 
 const getNotificationIcon = (type) => {
   switch (type) {
@@ -107,7 +108,7 @@ export const useNotificationStore = defineStore('notification', () => {
         onOpen: callbacks?.onOpen,
         onMessage: callbacks?.onMessage,
         onError: (error) => {
-          console.error('SSE 连接错误:', error)
+          log.error('SSE 连接错误:', error)
           if (callbacks?.onError) {
             callbacks.onError(error)
           }
@@ -117,7 +118,7 @@ export const useNotificationStore = defineStore('notification', () => {
     },
     onMessage: handleSSEMessage,
     onError: (error) => {
-      console.error('SSE 连接错误:', error)
+      log.error('SSE 连接错误:', error)
     },
     reconnectDelay: 5000,
   })
@@ -129,7 +130,7 @@ export const useNotificationStore = defineStore('notification', () => {
         unreadCount.value = res.data?.unreadCount ?? 0
       }
     } catch (error) {
-      console.error('获取未读通知数量失败:', error)
+      log.error('获取未读通知数量失败:', error)
     }
   }
 
@@ -145,7 +146,7 @@ export const useNotificationStore = defineStore('notification', () => {
         total.value = notifications.value.length
       }
     } catch (error) {
-      console.error('获取通知列表失败:', error)
+      log.error('获取通知列表失败:', error)
     } finally {
       loading.value = false
     }
@@ -164,7 +165,7 @@ export const useNotificationStore = defineStore('notification', () => {
         return res
       }
     } catch (error) {
-      console.error('获取通知列表失败:', error)
+      log.error('获取通知列表失败:', error)
     } finally {
       loading.value = false
     }
@@ -181,7 +182,7 @@ export const useNotificationStore = defineStore('notification', () => {
         }
       }
     } catch (error) {
-      console.error('标记通知已读失败:', error)
+      log.error('标记通知已读失败:', error)
     }
   }
 
@@ -195,7 +196,7 @@ export const useNotificationStore = defineStore('notification', () => {
         unreadCount.value = 0
       }
     } catch (error) {
-      console.error('标记全部已读失败:', error)
+      log.error('标记全部已读失败:', error)
     }
   }
 
@@ -213,7 +214,7 @@ export const useNotificationStore = defineStore('notification', () => {
         }
       }
     } catch (error) {
-      console.error('删除通知失败:', error)
+      log.error('删除通知失败:', error)
     }
   }
 

@@ -10,6 +10,8 @@
  * @param {Function} options.onClose - 连接关闭回调
  * @returns {Object} WebSocket 连接对象
  */
+import log from '@/utils/logger'
+
 export function createWebSocketConnection(url, options = {}) {
   const { onOpen, onMessage, onError, onClose } = options
 
@@ -27,7 +29,7 @@ export function createWebSocketConnection(url, options = {}) {
         const data = JSON.parse(event.data)
         onMessage(data)
       } catch (error) {
-        console.error('解析 WebSocket 消息失败:', error)
+        log.error('解析 WebSocket 消息失败:', error)
         if (onError) {
           onError(error)
         }

@@ -1,4 +1,5 @@
-import { ref, onUnmounted } from 'vue'
+import { ref, onScopeDispose, getCurrentScope } from 'vue'
+import log from '@/utils/logger'
 
 /**
  * 实时连接管理 Composable
@@ -23,7 +24,7 @@ export function useRealtimeConnection(options = {}) {
 
   const connection = ref(null)
   const isConnected = ref(false)
-  const reconnectTimer = ref(null)
+  let reconnectTimer = null
   const reconnectAttempts = ref(0)
 
   /**
@@ -97,17 +98,17 @@ export function useRealtimeConnection(options = {}) {
    * 安排重连
    */
   const scheduleReconnect = () => {
-    if (reconnectTimer.value) {
+    if (reconnectTimer) {
       return
     }
 
     if (reconnectAttempts.value >= maxReconnectAttempts) {
-      console.warn(`已达到最大重连次数 (${maxReconnectAttempts})，停止重连`)
+      log.warn(`已达到最大重连次数 (${maxReconnectAttempts})，停止重连`)
       return
     }
 
-    reconnectTimer.value = setTimeout(() => {
-      reconnectTimer.value = null
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null
       reconnectAttempts.value++
       connect()
     }, reconnectDelay)
@@ -117,18 +118,18 @@ export function useRealtimeConnection(options = {}) {
    * 清除重连定时器
    */
   const clearReconnectTimer = () => {
-    if (reconnectTimer.value) {
-      clearTimeout(reconnectTimer.value)
-      reconnectTimer.value = null
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer)
+      reconnectTimer = null
     }
   }
 
-  /**
-   * 组件卸载时自动断开连接
-   */
-  onUnmounted(() => {
-    disconnect()
-  })
+  // 在活跃的 effect scope 中自动清理连接
+  if (getCurrentScope()) {
+    onScopeDispose(() => {
+      disconnect()
+    })
+  }
 
   return {
     connection,

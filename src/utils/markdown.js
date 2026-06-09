@@ -1,6 +1,7 @@
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { getServerURL, getImageURL } from '@/config/server'
+import log from '@/utils/logger'
 
 marked.setOptions({
   breaks: true,
@@ -68,7 +69,7 @@ export const renderMarkdown = (content) => {
     const html = marked.parse(processedContent)
     return DOMPurify.sanitize(html, purifyConfig)
   } catch (error) {
-    console.error('Markdown 渲染失败:', error)
+    log.error('Markdown 渲染失败:', error)
     return escapeHtml(processedContent)
   }
 }
@@ -82,12 +83,10 @@ export const renderMarkdownAsync = async (content) => {
     const html = await marked.parse(processedContent)
     return DOMPurify.sanitize(html, purifyConfig)
   } catch (error) {
-    console.error('Markdown 渲染失败:', error)
+    log.error('Markdown 渲染失败:', error)
     return escapeHtml(processedContent)
   }
 }
-
-export const renderMarkdownSync = (content) => renderMarkdown(content)
 
 export const stripMarkdown = (content, maxLength = 200) => {
   if (!content) return ''
@@ -126,7 +125,7 @@ export const stripMarkdown = (content, maxLength = 200) => {
 
     return text
   } catch (error) {
-    console.error('Markdown 清理失败:', error)
+    log.error('Markdown 清理失败:', error)
     if (maxLength && content.length > maxLength) {
       return content.substring(0, maxLength) + '...'
     }
@@ -235,10 +234,21 @@ export const extractHeadingsFromDOM = (container) => {
   return headings
 }
 
-const escapeHtml = (text) => {
-  const div = document.createElement('div')
-  div.textContent = text
-  return div.innerHTML.replace(/\n/g, '<br>')
+export const escapeHtml = (text) => {
+  if (typeof document !== 'undefined') {
+    const div = document.createElement('div')
+    div.textContent = text
+    return div.innerHTML.replace(/\n/g, '<br>')
+  }
+  // SSR fallback
+  if (!text) return ''
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+    .replace(/\n/g, '<br>')
 }
 
 export const getMarkdownStyles = () => `

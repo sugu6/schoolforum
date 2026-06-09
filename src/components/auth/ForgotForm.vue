@@ -111,7 +111,7 @@
 
 <script setup>
 import { Message } from '@arco-design/web-vue'
-import { getCaptcha, resetPassword } from '@/apis/users'
+import { getCaptcha, resetPassword, verifyCaptcha } from '@/apis/users'
 
 const emit = defineEmits(['go-login', 'go-home'])
 
@@ -204,9 +204,13 @@ const handleSendCode = async ({ errors }) => {
   loading.value = true
   try {
     const res = await getCaptcha(form.email, 'resetPassword')
-    Message.success('验证码已发送')
-    currentStep.value = 1
-    startCountdown()
+    if (res.code === 200) {
+      Message.success('验证码已发送')
+      currentStep.value = 1
+      startCountdown()
+    } else {
+      Message.error(res.msg || res.message || '发送验证码失败')
+    }
   } finally {
     loading.value = false
   }
@@ -216,8 +220,12 @@ const handleResend = async () => {
   loading.value = true
   try {
     const res = await getCaptcha(form.email, 'resetPassword')
-    Message.success('验证码已重新发送')
-    startCountdown()
+    if (res.code === 200) {
+      Message.success('验证码已重新发送')
+      startCountdown()
+    } else {
+      Message.error(res.msg || res.message || '发送验证码失败')
+    }
   } finally {
     loading.value = false
   }
@@ -227,9 +235,15 @@ const handleVerifyCode = async ({ errors }) => {
   if (errors) return
   loading.value = true
   try {
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    Message.success('验证成功')
-    currentStep.value = 2
+    const res = await verifyCaptcha({ email: form.email, code: form.code, type: 'resetPassword' })
+    if (res.code === 200) {
+      Message.success('验证成功')
+      currentStep.value = 2
+    } else {
+      Message.error(res.msg || res.message || '验证码错误')
+    }
+  } catch (error) {
+    Message.error('验证码验证失败，请重试')
   } finally {
     loading.value = false
   }
@@ -244,10 +258,14 @@ const handleResetPassword = async ({ errors }) => {
       captcha: form.code,
       newPassword: form.newPassword,
     })
-    Message.success('密码重置成功')
-    setTimeout(() => {
-      emit('go-login')
-    }, 1500)
+    if (res.code === 200) {
+      Message.success('密码重置成功')
+      setTimeout(() => {
+        emit('go-login')
+      }, 1500)
+    } else {
+      Message.error(res.msg || res.message || '密码重置失败')
+    }
   } finally {
     loading.value = false
   }

@@ -237,8 +237,7 @@ import { getCategoryList } from '@/apis/categories'
 import { getTagsByCategory } from '@/apis/tags'
 import { useUserStore } from '@/stores/user'
 import { renderMarkdown } from '@/utils/markdown'
-import TiptapEditor from '@/components/TiptapEditor.vue'
-
+import log from '@/utils/logger'
 definePage({
   meta: {
     title: '发布帖子',
@@ -315,7 +314,7 @@ const fetchCategories = async () => {
       }))
     }
   } catch (error) {
-    console.error('获取分类失败:', error)
+    log.error('获取分类失败:', error)
   }
 }
 
@@ -340,7 +339,7 @@ const fetchTagsByCategory = async (categoryId) => {
       }))
     }
   } catch (error) {
-    console.error('获取标签失败:', error)
+    log.error('获取标签失败:', error)
   } finally {
     tagsLoading.value = false
   }
@@ -380,12 +379,18 @@ const handleCoverChange = async (fileList, file) => {
       Message.success('封面上传成功')
     } else {
       Message.error(res.message || '封面上传失败')
+      if (coverPreview.value && coverPreview.value.startsWith('blob:')) {
+        URL.revokeObjectURL(coverPreview.value)
+      }
       coverPreview.value = ''
       coverFileList.value = []
     }
   } catch (error) {
-    console.error('上传封面失败:', error)
+    log.error('上传封面失败:', error)
     Message.error('封面上传失败')
+    if (coverPreview.value && coverPreview.value.startsWith('blob:')) {
+      URL.revokeObjectURL(coverPreview.value)
+    }
     coverPreview.value = ''
     coverFileList.value = []
   } finally {
@@ -394,6 +399,9 @@ const handleCoverChange = async (fileList, file) => {
 }
 
 const removeCover = () => {
+  if (coverPreview.value && coverPreview.value.startsWith('blob:')) {
+    URL.revokeObjectURL(coverPreview.value)
+  }
   coverPreview.value = ''
   coverFileList.value = []
   postForm.coverImage = ''
@@ -411,7 +419,7 @@ const handleImageUpload = async (file) => {
       Message.error(res.message || '图片上传失败')
     }
   } catch (error) {
-    console.error('上传图片失败:', error)
+    log.error('上传图片失败:', error)
     Message.error('图片上传失败')
   }
 }
@@ -443,7 +451,7 @@ const handleSubmit = async () => {
       Message.error(res.message || '帖子发布失败')
     }
   } catch (error) {
-    console.error('发布帖子失败:', error)
+    log.error('发布帖子失败:', error)
     Message.error('帖子发布失败')
   } finally {
     submitting.value = false

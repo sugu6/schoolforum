@@ -164,6 +164,7 @@ import {
 import { Message } from '@arco-design/web-vue'
 import { useUserStore } from '@/stores/user'
 import { usePageRefresh } from '@/composables/usePageRefresh'
+import log from '@/utils/logger'
 import {
   signDaily,
   getSignStatus,
@@ -256,7 +257,7 @@ const fetchCheckinStatus = async () => {
       }
     }
   } catch (error) {
-    console.error('获取签到状态失败:', error)
+    log.error('获取签到状态失败:', error)
     checkedIn.value = false
   }
 }
@@ -440,9 +441,9 @@ const handleRepairConfirm = async () => {
   }
 
   try {
-    console.log('补签请求日期:', selectedDate.value)
+    log.debug('补签请求日期:', selectedDate.value)
     const res = await repairSign(selectedDate.value)
-    console.log('补签响应:', res)
+    log.debug('补签响应:', res)
     const data = res?.data || res
     if (data?.success) {
       checkinStats.value.signCards = data.remainingCards ?? checkinStats.value.signCards - 1
@@ -459,7 +460,7 @@ const handleRepairConfirm = async () => {
       Message.error(data?.message || '补签失败')
     }
   } catch (error) {
-    console.error('补签失败:', error)
+    log.error('补签失败:', error)
     const errorMsg = error?.response?.data?.message || error?.message || '补签失败，请稍后再试'
     Message.error(errorMsg)
   } finally {

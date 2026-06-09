@@ -92,7 +92,12 @@ const goHome = () => router.push('/')
 
 const handleLoginSuccess = () => {
   const redirect = route.query.redirect || '/'
-  router.push(redirect)
+  // 防止开放重定向：只允许相对路径
+  if (redirect.startsWith('/') && !redirect.startsWith('//')) {
+    router.push(redirect)
+  } else {
+    router.push('/')
+  }
 }
 
 const handleRegisterSuccess = () => {

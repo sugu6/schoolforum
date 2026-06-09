@@ -19,6 +19,5 @@ app.use(ArcoVue)
 
 // 初始化主题
 const themeStore = useThemeStore()
-themeStore.isDark = localStorage.getItem('theme-dark') === 'true'
 
 app.mount('#app')

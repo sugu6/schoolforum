@@ -43,9 +43,13 @@ export function createWebSocketConnection(url, options = {}) {
     }
   }
 
-  ws.onclose = () => {
+  ws.onclose = (event) => {
+    // 1008 = Policy Violation（通常是认证失败），4000+ = 自定义认证错误码
+    if (event.code === 1008 || event.code >= 4000) {
+      log.warn('WebSocket 认证失败，可能需要重新登录')
+    }
     if (onClose) {
-      onClose()
+      onClose(event)
     }
   }
 

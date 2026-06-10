@@ -79,12 +79,28 @@ export const useMessageStore = defineStore('message', () => {
         throw new Error('No token available')
       }
 
-      // token 放在路径中（/ws/message/{token}），避免广告拦截器拦截 ?token= 参数
-      const wsUrl = getWebSocketURL(`/ws/message/${token}`)
+      // URL 不携带 token，避免广告拦截器拦截；连接后通过 auth 消息发送
+      const wsUrl = getWebSocketURL('/ws/message')
+      let authed = false
 
       return createWebSocketConnection(wsUrl, {
         onOpen: callbacks?.onOpen,
-        onMessage: callbacks?.onMessage,
+        onMessage: (data) => {
+          // 处理认证响应
+          if (data.type === 'auth_success') {
+            authed = true
+            log.debug('WebSocket 认证成功')
+            return
+          }
+          if (data.type === 'auth_error' || data.type === 'auth_required' || data.type === 'auth_timeout') {
+            log.warn('WebSocket 认证失败:', data.data?.message)
+            return
+          }
+          // 认证成功后才处理业务消息
+          if (authed && callbacks?.onMessage) {
+            callbacks.onMessage(data)
+          }
+        },
         onError: (error) => {
           log.error('WebSocket 连接错误:', error)
           if (callbacks?.onError) {
@@ -92,6 +108,10 @@ export const useMessageStore = defineStore('message', () => {
           }
         },
         onClose: callbacks?.onClose,
+        // 连接建立后立即发送 auth 消息
+        onConnected: (send) => {
+          send({ type: 'auth', token })
+        },
       })
     },
     onMessage: handleWSMessage,

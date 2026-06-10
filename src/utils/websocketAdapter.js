@@ -13,15 +13,19 @@
 import log from '@/utils/logger'
 
 export function createWebSocketConnection(url, options = {}) {
-  const { onOpen, onMessage, onError, onClose } = options
+  const { onOpen, onMessage, onError, onClose, onConnected } = options
 
-  log.debug('WebSocket 连接中:', url.replace(/\/ws\/message\/[^/]+/, '/ws/message/***'))
+  log.debug('WebSocket 连接中:', url)
   const ws = new WebSocket(url)
 
   ws.onopen = () => {
     log.debug('WebSocket 连接成功')
     if (onOpen) {
       onOpen()
+    }
+    // 连接建立后立即触发 onConnected，用于发送 auth 消息
+    if (onConnected) {
+      onConnected((data) => ws.send(JSON.stringify(data)))
     }
   }
 

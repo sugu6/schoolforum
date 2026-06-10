@@ -23,6 +23,21 @@ const alovaInstance = createAlova({
     onSuccess: async (response, method) => {
       const json = await response.json()
       log.info(`[API ${method.type} ✓] ${method.url}`, json)
+      // 安全网：后端返回 HTTP 200 但业务码 401 时也触发退出
+      if (json.code === 401 && !handling401) {
+        handling401 = true
+        import('@/stores/user').then(({ useUserStore }) => {
+          const userStore = useUserStore()
+          userStore.clearUser()
+          return import('@/router')
+        }).then(({ default: router }) => {
+          router.push('/auth?mode=login')
+        }).catch(() => {
+          handling401 = false
+        }).finally(() => {
+          handling401 = false
+        })
+      }
       return json
     },
     onError: (error, method) => {

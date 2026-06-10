@@ -18,6 +18,7 @@ export function useRealtimeConnection(options = {}) {
     createConnection,
     onMessage,
     onError,
+    shouldReconnect = () => true,
     reconnectDelay = 5000,
     maxReconnectAttempts = Infinity,
   } = options
@@ -49,6 +50,10 @@ export function useRealtimeConnection(options = {}) {
         },
         onError: (error) => {
           isConnected.value = false
+          if (connection.value && typeof connection.value.close === 'function') {
+            connection.value.close()
+          }
+          connection.value = null
           if (onError) {
             onError(error)
           }
@@ -57,7 +62,9 @@ export function useRealtimeConnection(options = {}) {
         onClose: (event) => {
           isConnected.value = false
           connection.value = null
-          scheduleReconnect()
+          if (shouldReconnect(event)) {
+            scheduleReconnect()
+          }
         },
       })
     } catch (error) {

@@ -101,6 +101,9 @@ export function createSSEConnection(url, options = {}) {
           onError(error)
         }
       }
+      if (onClose) {
+        onClose()
+      }
     })
 
   return connection

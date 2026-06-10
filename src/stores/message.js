@@ -90,19 +90,18 @@ export const useMessageStore = defineStore('message', () => {
             callbacks.onError(error)
           }
         },
-        onClose: (event) => {
-          // 认证失败时停止重试，避免无限重连
-          if (event?.code === 1008 || event?.code === 4001) {
-            log.warn('WebSocket 认证失败，停止重连')
-            return
-          }
-          if (callbacks?.onClose) {
-            callbacks.onClose(event)
-          }
-        },
+        onClose: callbacks?.onClose,
       })
     },
     onMessage: handleWSMessage,
+    shouldReconnect: (event) => {
+      // 认证失败时停止重连
+      if (event?.code === 1008 || event?.code === 4001) {
+        log.warn('WebSocket 认证失败，停止重连')
+        return false
+      }
+      return true
+    },
     onError: (error) => {
       if (error?.message === 'WS_AUTH_FAILED') return
       log.error('WebSocket 连接错误:', error)

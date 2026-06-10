@@ -79,8 +79,9 @@ export const useMessageStore = defineStore('message', () => {
         throw new Error('No token available')
       }
 
-      // URL 不携带 token，避免广告拦截器拦截；连接后通过 auth 消息发送
-      const wsUrl = getWebSocketURL('/ws/message')
+      // 使用 /api/realtime 路径，避免广告拦截器拦截 /ws/ 路径
+      // URL 不携带 token，连接后通过 auth 消息发送
+      const wsUrl = getWebSocketURL('/api/realtime')
       let authed = false
 
       return createWebSocketConnection(wsUrl, {

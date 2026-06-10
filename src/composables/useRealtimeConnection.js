@@ -54,7 +54,7 @@ export function useRealtimeConnection(options = {}) {
           }
           scheduleReconnect()
         },
-        onClose: () => {
+        onClose: (event) => {
           isConnected.value = false
           connection.value = null
           scheduleReconnect()

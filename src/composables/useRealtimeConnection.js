@@ -21,6 +21,7 @@ export function useRealtimeConnection(options = {}) {
     shouldReconnect = () => true,
     reconnectDelay = 5000,
     maxReconnectAttempts = Infinity,
+    onReconnectExhausted = null,
   } = options
 
   const connection = ref(null)
@@ -111,6 +112,9 @@ export function useRealtimeConnection(options = {}) {
 
     if (reconnectAttempts.value >= maxReconnectAttempts) {
       log.warn(`已达到最大重连次数 (${maxReconnectAttempts})，停止重连`)
+      if (onReconnectExhausted) {
+        onReconnectExhausted()
+      }
       return
     }
 

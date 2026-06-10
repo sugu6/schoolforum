@@ -1,5 +1,8 @@
 const isDev = import.meta.env.DEV
 
+// 检测是否从后端域名访问（Nginx 代理模式），此时所有请求走同域
+const isSameOrigin = !isDev && window.location.host !== 'suguny.github.io'
+
 const serverURL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8085'
 
 // 生产环境兜底：如果在 GitHub Pages 等静态托管上运行且 VITE_SERVER_URL 未注入，使用硬编码的后端地址
@@ -14,30 +17,26 @@ export const serverConfig = {
 }
 
 export const getServerURL = () => {
-  if (isDev) {
+  if (isDev || isSameOrigin) {
     return ''
   }
   return serverConfig.baseURL
 }
 
 export const getAPIBaseURL = () => {
-  if (isDev) {
+  if (isDev || isSameOrigin) {
     return '/api'
   }
   return serverConfig.baseURL
 }
 
 export const getWebSocketURL = (path) => {
-  if (isDev) {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    return `${protocol}//${window.location.host}${path}`
-  }
-  const wsURL = serverConfig.baseURL.replace(/^http/, 'ws')
-  return `${wsURL}${path}`
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${protocol}//${window.location.host}${path}`
 }
 
 export const getSSEURL = (path) => {
-  if (isDev) {
+  if (isDev || isSameOrigin) {
     return path
   }
   return `${serverConfig.baseURL}${path}`

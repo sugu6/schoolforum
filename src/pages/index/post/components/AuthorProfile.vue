@@ -1,4 +1,4 @@
-﻿﻿<template>
+﻿﻿﻿﻿<template>
   <a-card class="author-card sidebar-card" :bordered="true" :loading="loading">
     <div v-if="!loading && authorInfo.id" class="author-profile">
       <a-avatar :size="64" class="profile-avatar">

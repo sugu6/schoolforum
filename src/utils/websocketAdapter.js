@@ -15,7 +15,7 @@ import log from '@/utils/logger'
 export function createWebSocketConnection(url, options = {}) {
   const { onOpen, onMessage, onError, onClose } = options
 
-  log.debug('WebSocket 连接中:', url.replace(/\?token=[^&]+/, '?token=***'))
+  log.debug('WebSocket 连接中:', url.replace(/\/ws\/message\/[^/]+/, '/ws/message/***'))
   const ws = new WebSocket(url)
 
   ws.onopen = () => {

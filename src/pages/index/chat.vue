@@ -1,4 +1,4 @@
-﻿﻿<template>
+﻿﻿﻿﻿<template>
   <div class="messages-page">
     <div class="messages-container">
       <div class="conversations-panel">

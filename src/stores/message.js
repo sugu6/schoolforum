@@ -79,7 +79,8 @@ export const useMessageStore = defineStore('message', () => {
         throw new Error('No token available')
       }
 
-      const wsUrl = getWebSocketURL(`/ws/message?token=${encodeURIComponent(token)}`)
+      // token 放在路径中（/ws/message/{token}），避免广告拦截器拦截 ?token= 参数
+      const wsUrl = getWebSocketURL(`/ws/message/${token}`)
 
       return createWebSocketConnection(wsUrl, {
         onOpen: callbacks?.onOpen,

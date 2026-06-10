@@ -27,12 +27,17 @@ export const getAPIBaseURL = () => {
   if (isDev || isSameOrigin) {
     return '/api'
   }
-  return serverConfig.baseURL
+  return `${serverConfig.baseURL}/api`
 }
 
 export const getWebSocketURL = (path) => {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${protocol}//${window.location.host}${path}`
+  if (isDev || isSameOrigin) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${protocol}//${window.location.host}${path}`
+  }
+  // 跨域时（如 GitHub Pages）使用后端 WebSocket 地址
+  const wsBase = serverConfig.baseURL.replace(/^http/, 'ws')
+  return `${wsBase}${path}`
 }
 
 export const getSSEURL = (path) => {

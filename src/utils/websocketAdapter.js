@@ -15,9 +15,11 @@ import log from '@/utils/logger'
 export function createWebSocketConnection(url, options = {}) {
   const { onOpen, onMessage, onError, onClose } = options
 
+  log.debug('WebSocket 连接中:', url.replace(/\?token=[^&]+/, '?token=***'))
   const ws = new WebSocket(url)
 
   ws.onopen = () => {
+    log.debug('WebSocket 连接成功')
     if (onOpen) {
       onOpen()
     }
@@ -38,12 +40,14 @@ export function createWebSocketConnection(url, options = {}) {
   }
 
   ws.onerror = (error) => {
+    log.error('WebSocket 连接错误, readyState:', ws.readyState)
     if (onError) {
       onError(error)
     }
   }
 
   ws.onclose = (event) => {
+    log.warn('WebSocket 关闭: code=', event.code, 'reason=', event.reason || '无')
     // 1008 = Policy Violation（通常是认证失败），4000+ = 自定义认证错误码
     if (event.code === 1008 || event.code >= 4000) {
       log.warn('WebSocket 认证失败，可能需要重新登录')

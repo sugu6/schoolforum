@@ -6,6 +6,39 @@ import { getAPIBaseURL } from '@/config/server'
 
 let handling401 = false
 
+const REASON_MAP = {
+  '登录已过期': 'TOKEN_TIMEOUT',
+  '登录凭证无效': 'INVALID_TOKEN',
+  '其他设备登录': 'BE_REPLACED',
+  '踢下线': 'KICK_OUT',
+  '已被冻结': 'TOKEN_FREEZE',
+}
+
+const handle401 = (message) => {
+  if (handling401) return
+  handling401 = true
+  let reason = 'expired'
+  if (message) {
+    for (const [key, value] of Object.entries(REASON_MAP)) {
+      if (message.includes(key)) {
+        reason = value
+        break
+      }
+    }
+  }
+  import('@/stores/user').then(({ useUserStore }) => {
+    const userStore = useUserStore()
+    userStore.clearUser()
+    return import('@/router')
+  }).then(({ default: router }) => {
+    router.push({ path: '/auth', query: { mode: 'login', reason } })
+  }).catch(() => {
+    handling401 = false
+  }).finally(() => {
+    handling401 = false
+  })
+}
+
 const alovaInstance = createAlova({
   baseURL: getAPIBaseURL(),
   statesHook: VueHook,
@@ -23,47 +56,15 @@ const alovaInstance = createAlova({
     onSuccess: async (response, method) => {
       const json = await response.json()
       log.info(`[API ${method.type} ✓] ${method.url}`, json)
-      // 安全网：后端返回 HTTP 200 但业务码 401 时也触发退出
-      if (json.code === 401 && !handling401) {
-        handling401 = true
-        import('@/stores/user').then(({ useUserStore }) => {
-          const userStore = useUserStore()
-          userStore.clearUser()
-          return import('@/router')
-        }).then(({ default: router }) => {
-          router.push('/auth?mode=login')
-        }).catch(() => {
-          handling401 = false
-        }).finally(() => {
-          handling401 = false
-        })
+      if (json.code === 401) {
+        handle401(json.message)
       }
       return json
     },
     onError: (error, method) => {
       log.error(`[API ${method?.type} ✗] ${method?.url}`, error)
-      if (error.response) {
-        switch (error.response.status) {
-          case 401: {
-            // 防止并发 401 重复处理
-            if (!handling401) {
-              handling401 = true
-              // 延迟导入避免循环依赖
-              import('@/stores/user').then(({ useUserStore }) => {
-                const userStore = useUserStore()
-                userStore.clearUser()
-                return import('@/router')
-              }).then(({ default: router }) => {
-                router.push('/auth?mode=login')
-              }).catch(() => {
-                handling401 = false
-              }).finally(() => {
-                handling401 = false
-              })
-            }
-            break
-          }
-        }
+      if (error.response?.status === 401) {
+        handle401()
       }
       throw error
     },

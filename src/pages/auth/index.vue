@@ -14,15 +14,6 @@
       </div>
 
       <div class="auth-right">
-        <a-alert
-          v-if="expiredMessage"
-          :closable="true"
-          type="warning"
-          style="margin-bottom: 16px"
-          @close="expiredMessage = ''"
-        >
-          {{ expiredMessage }}
-        </a-alert>
         <Transition :name="transitionName" mode="out-in">
           <LoginForm
             v-if="currentMode === 'login'"
@@ -74,20 +65,6 @@ const modeFromQuery = () => {
 
 const currentMode = ref(modeFromQuery())
 const transitionName = ref('slide-left')
-const expiredMessage = ref('')
-
-const reasonMessages = {
-  expired: '登录已过期，请重新登录',
-  INVALID_TOKEN: '登录凭证无效，请重新登录',
-  TOKEN_TIMEOUT: '登录已过期，请重新登录',
-  BE_REPLACED: '账号已在其他设备登录',
-  KICK_OUT: '账号已被踢下线',
-  TOKEN_FREEZE: '账号已被冻结',
-}
-
-if (route.query.reason) {
-  expiredMessage.value = reasonMessages[route.query.reason] || '请先登录'
-}
 
 const slogans = {
   login: '连接校园，分享精彩',

@@ -6,11 +6,15 @@ import { getAPIBaseURL } from '@/config/server'
 import { Message } from '@arco-design/web-vue'
 
 let handling401 = false
-let hasNotified = false
+let expiryTimer = null
 
-function clearUserAndRedirect() {
+/**
+ * 统一的 token 过期处理：提示 + 清除用户 + 跳转登录
+ */
+export function handleTokenExpired() {
+  if (handling401) return
   handling401 = true
-  hasNotified = true
+  clearExpiryTimer()
   Message.warning('登录已过期，请重新登录')
   import('@/stores/user').then(({ useUserStore }) => {
     const userStore = useUserStore()
@@ -20,11 +24,64 @@ function clearUserAndRedirect() {
     router.push('/auth?mode=login')
   }).catch(() => {
     handling401 = false
-    hasNotified = false
   }).finally(() => {
     handling401 = false
-    hasNotified = false
   })
+}
+
+/**
+ * 解析 JWT payload 中的 exp 字段
+ */
+function getTokenExp(token) {
+  try {
+    const parts = token.split('.')
+    if (parts.length !== 3) return null
+    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    while (base64.length % 4) base64 += '='
+    const payload = JSON.parse(atob(base64))
+    return payload.exp ? payload.exp * 1000 : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 设置 token 过期定时器，提前 30 秒提示
+ */
+export function setupExpiryTimer() {
+  clearExpiryTimer()
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  if (!token) return
+
+  const exp = getTokenExp(token)
+  if (!exp) return
+
+  const now = Date.now()
+  const remaining = exp - now
+
+  if (remaining <= 0) {
+    // 已过期，立即处理
+    handleTokenExpired()
+    return
+  }
+
+  // 提前 30 秒提示（最少 5 秒后提示）
+  const notifyAt = Math.max(remaining - 30000, 5000)
+  log.info(`Token 将在 ${Math.round(remaining / 1000)}s 后过期，${Math.round(notifyAt / 1000)}s 后提示`)
+
+  expiryTimer = setTimeout(() => {
+    handleTokenExpired()
+  }, notifyAt)
+}
+
+/**
+ * 清除过期定时器
+ */
+export function clearExpiryTimer() {
+  if (expiryTimer) {
+    clearTimeout(expiryTimer)
+    expiryTimer = null
+  }
 }
 
 const alovaInstance = createAlova({
@@ -46,7 +103,7 @@ const alovaInstance = createAlova({
       log.info(`[API ${method.type} ✓] ${method.url}`, json)
       // 安全网：后端返回 HTTP 200 但业务码 401 时也触发退出
       if (json.code === 401 && !handling401) {
-        clearUserAndRedirect()
+        handleTokenExpired()
       }
       return json
     },
@@ -56,7 +113,7 @@ const alovaInstance = createAlova({
         switch (error.response.status) {
           case 401: {
             if (!handling401) {
-              clearUserAndRedirect()
+              handleTokenExpired()
             }
             break
           }

@@ -95,6 +95,10 @@ export const useMessageStore = defineStore('message', () => {
           }
           if (data.type === 'auth_error' || data.type === 'auth_required' || data.type === 'auth_timeout') {
             log.warn('WebSocket 认证失败:', data.data?.message)
+            // Token 过期，主动提示并跳转登录
+            import('@/apis/request').then(({ handleTokenExpired }) => {
+              handleTokenExpired()
+            })
             return
           }
           // 认证成功后才处理业务消息

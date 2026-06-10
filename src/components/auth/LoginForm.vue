@@ -118,6 +118,11 @@ const handleSubmit = async ({ errors }) => {
       userStore.setUserInfo(res.data.user, form.remember)
     }
 
+    // 启动 token 过期定时器
+    import('@/apis/request').then(({ setupExpiryTimer }) => {
+      setupExpiryTimer()
+    })
+
     notificationStore.fetchUnreadCount()
     notificationStore.connectSSE()
 

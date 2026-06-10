@@ -99,6 +99,10 @@ const handleAuthSuccess = (data) => {
   } else {
     userStore.fetchUserInfo()
   }
+  // 启动 token 过期定时器
+  import('@/apis/request').then(({ setupExpiryTimer }) => {
+    setupExpiryTimer()
+  })
   router.replace(isLogin ? '/' : '/profile')
 }
 

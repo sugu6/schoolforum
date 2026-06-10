@@ -1,21 +1,13 @@
-name: 部署到 GitHub Pages
+name: Build & Deploy
 
 on:
   push:
     branches: [main, master]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
@@ -36,23 +28,44 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: 构建项目
-        run: pnpm build --base=/${{ github.event.repository.name }}/
-
-      - name: 设置 Pages
-        uses: actions/configure-pages@v5
+        run: pnpm build
 
       - name: 上传构建产物
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
+          name: dist
           path: dist
 
   deploy:
+    name: Deploy to Server
     needs: build
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: 部署到 GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: 下载构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: 部署到服务器
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DOCKER_HOST }}
+          username: root
+          password: ${{ secrets.ROOT_PASSWORD }}
+          port: ${{ secrets.DOCKER_PORT || 22 }}
+          source: "dist/*"
+          target: /var/www/schoolforum/
+          strip_components: 1
+
+      - name: Reload Nginx
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DOCKER_HOST }}
+          username: root
+          password: ${{ secrets.ROOT_PASSWORD }}
+          port: ${{ secrets.DOCKER_PORT || 22 }}
+          script: |
+            nginx -s reload
+            echo "Frontend deployed and Nginx reloaded"

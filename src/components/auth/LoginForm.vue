@@ -53,13 +53,11 @@
 import { login } from '@/apis/users.js'
 import { Message } from '@arco-design/web-vue'
 import { useUserStore } from '@/stores/user'
-import { useNotificationStore } from '@/stores/notification'
 import { getAPIBaseURL } from '@/config/server'
 
 const emit = defineEmits(['go-register', 'go-forgot', 'go-home', 'login-success'])
 
 const userStore = useUserStore()
-const notificationStore = useNotificationStore()
 const loading = ref(false)
 
 const form = reactive({
@@ -112,19 +110,20 @@ const handleSubmit = async ({ errors }) => {
       return
     }
 
-    userStore.setToken(res.data.token, form.remember)
-
+    // Token 通过 httpOnly Cookie 自动设置，无需手动存储
+    // 只保存 userInfo 和 expiresIn
     if (res.data.user) {
-      userStore.setUserInfo(res.data.user, form.remember)
+      userStore.setUserInfo(res.data.user)
+    }
+
+    if (res.data.expiresIn) {
+      userStore.setTokenExpiresAt(res.data.expiresIn)
     }
 
     // 启动 token 过期定时器
     import('@/apis/request').then(({ setupExpiryTimer }) => {
       setupExpiryTimer()
     })
-
-    notificationStore.fetchUnreadCount()
-    notificationStore.connectSSE()
 
     Message.success('登录成功')
     emit('login-success')
@@ -148,6 +147,11 @@ const handleGithubLogin = () => {
   color: var(--color-text-1);
   margin-bottom: 32px;
   text-align: center;
+
+  @media (max-width: 576px) {
+    font-size: 20px;
+    margin-bottom: 24px;
+  }
 }
 
 .auth-form {

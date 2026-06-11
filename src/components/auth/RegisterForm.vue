@@ -235,6 +235,11 @@ const handleSubmit = async ({ errors }) => {
   margin-bottom: 12px;
   margin-top: -30px;
   text-align: center;
+
+  @media (max-width: 576px) {
+    font-size: 20px;
+    margin-top: -20px;
+  }
 }
 
 .auth-form {

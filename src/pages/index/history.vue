@@ -241,13 +241,15 @@ const getFirstImage = (content) => {
 
 onMounted(() => {
   if (!userStore.isLoggedIn) {
-    const token = localStorage.getItem('token')
-    if (token) {
-      userStore.fetchUserInfo().then(fetchHistoryList)
-    } else {
-      Message.warning('请先登录')
-      router.push('/auth?mode=login')
-    }
+    // Token 在 httpOnly Cookie 中，尝试通过后端验证会话
+    userStore.validateSession().then(valid => {
+      if (valid) {
+        fetchHistoryList()
+      } else {
+        Message.warning('请先登录')
+        router.push('/auth?mode=login')
+      }
+    })
   } else {
     fetchHistoryList()
   }

@@ -85,6 +85,10 @@ const formatTime = formatTimeAgo
   color: var(--color-text-2);
   line-height: 1.6;
   margin: 0;
+
+  @media (max-width: 576px) {
+    font-size: 13px;
+  }
 }
 
 .deleted-text {

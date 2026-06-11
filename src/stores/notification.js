@@ -95,28 +95,35 @@ export const useNotificationStore = defineStore('notification', () => {
     disconnect: disconnectSSE,
   } = useRealtimeConnection({
     createConnection: (callbacks) => {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-      const url = getSSEURL('/notifications/subscribe')
-
-      const headers = {}
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
+      // 未登录时不建立 SSE 连接
+      if (!localStorage.getItem('userInfo')) {
+        log.debug('未登录，跳过 SSE 连接')
+        setTimeout(() => callbacks?.onClose?.({ code: 1008, reason: 'Not logged in' }), 0)
+        return { close: () => {}, send: () => {} }
       }
 
+      const url = getSSEURL('/api/notifications/subscribe')
+
+      // Token 通过 httpOnly Cookie 自动携带，无需手动设置 Authorization header
+      // 浏览器会在同域 SSE 请求中自动携带 Cookie
       return createSSEConnection(url, {
-        headers,
         onOpen: callbacks?.onOpen,
         onMessage: callbacks?.onMessage,
         onError: (error) => {
           log.error('SSE 连接错误:', error)
-          if (callbacks?.onError) {
-            callbacks.onError(error)
-          }
+          callbacks?.onError?.(error)
         },
         onClose: callbacks?.onClose,
       })
     },
     onMessage: handleSSEMessage,
+    shouldReconnect: (event) => {
+      if (event?.code === 1008) {
+        log.debug('SSE 未登录，停止重连')
+        return false
+      }
+      return true
+    },
     onError: (error) => {
       log.error('SSE 连接错误:', error)
     },
@@ -124,6 +131,7 @@ export const useNotificationStore = defineStore('notification', () => {
   })
 
   const fetchUnreadCount = async () => {
+    if (!localStorage.getItem('userInfo')) return
     try {
       const res = await getUnreadCount()
       if (res.code === 200) {

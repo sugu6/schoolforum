@@ -1,7 +1,7 @@
-﻿﻿﻿﻿﻿﻿﻿﻿<template>
+﻿﻿﻿﻿﻿<template>
   <div class="messages-page">
     <div class="messages-container">
-      <div class="conversations-panel">
+      <div class="conversations-panel" :class="{ 'mobile-hidden': currentConversation }">
         <div class="panel-header">
           <h3 class="panel-title">私信</h3>
           <a-badge :count="totalUnread" :max-count="99" :dot="false">
@@ -62,6 +62,9 @@
       <div class="chat-panel">
         <template v-if="currentConversation">
           <div class="chat-header">
+            <div class="mobile-back-btn" @click="currentConversation = null">
+              <icon-left :size="20" />
+            </div>
             <div class="chat-user-info">
               <a-avatar :size="36" class="chat-avatar">
                 <img
@@ -779,6 +782,14 @@ onUnmounted(() => {
   }
 }
 
+.mobile-back-btn {
+  display: none;
+  cursor: pointer;
+  color: var(--color-text-2);
+  padding: 4px;
+  margin-right: 4px;
+}
+
 @media (max-width: 768px) {
   .messages-page {
     padding: 0;
@@ -788,22 +799,41 @@ onUnmounted(() => {
   .messages-container {
     height: 100%;
     border-radius: 0;
+    position: relative;
   }
 
   .conversations-panel {
     width: 100%;
+    height: 100%;
     position: absolute;
+    top: 0;
+    left: 0;
     z-index: 10;
     background: var(--color-bg-2);
-    transition: transform 0.3s;
+    transition: transform 0.3s, opacity 0.3s;
 
-    &.hidden {
+    &.mobile-hidden {
       transform: translateX(-100%);
+      opacity: 0;
+      pointer-events: none;
     }
   }
 
   .chat-panel {
     width: 100%;
+    height: 100%;
+  }
+
+  .mobile-back-btn {
+    display: flex;
+  }
+
+  .chat-header {
+    padding: 12px 16px;
+  }
+
+  .message-input-area {
+    padding: 8px 12px;
   }
 }
 </style>

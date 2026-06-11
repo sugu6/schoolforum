@@ -116,7 +116,7 @@ const handleSubmitComment = async (content) => {
     const { useUserStore } = await import('@/stores/user')
     const userStore = useUserStore()
 
-    if (!userStore.token) {
+    if (!userStore.isLoggedIn) {
       Message.warning('请先登录')
       emit('login')
       return
@@ -194,7 +194,7 @@ const submitReply = async (target, content) => {
     const { useUserStore } = await import('@/stores/user')
     const userStore = useUserStore()
 
-    if (!userStore.token) {
+    if (!userStore.isLoggedIn) {
       Message.warning('请先登录')
       emit('login')
       return
@@ -390,10 +390,18 @@ defineExpose({
   :deep(.arco-card-header) {
     border-bottom: 1px solid var(--color-border-2);
     padding: 16px 24px;
+
+    @media (max-width: 576px) {
+      padding: 12px 16px;
+    }
   }
 
   :deep(.arco-card-body) {
     padding: 24px;
+
+    @media (max-width: 576px) {
+      padding: 16px;
+    }
   }
 }
 
@@ -404,6 +412,11 @@ defineExpose({
   font-size: 18px;
   font-weight: 600;
   color: var(--color-text-1);
+
+  @media (max-width: 576px) {
+    font-size: 16px;
+    gap: 8px;
+  }
 }
 
 .comment-count {

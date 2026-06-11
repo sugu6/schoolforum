@@ -485,6 +485,11 @@ defineExpose({
   padding: 8px;
   background: var(--color-fill-2);
   border-bottom: 1px solid var(--color-border-2);
+
+  @media (max-width: 576px) {
+    gap: 2px;
+    padding: 6px;
+  }
 }
 
 .toolbar-btn {
@@ -521,6 +526,17 @@ defineExpose({
   svg {
     width: 18px;
     height: 18px;
+  }
+
+  @media (max-width: 576px) {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
   }
 }
 

@@ -1320,13 +1320,16 @@ onMounted(() => {
     }
   }
   if (!userStore.isLoggedIn) {
-    const token = localStorage.getItem('token')
-    if (token) {
-      userStore.fetchUserInfo().then(initLoad)
-    } else {
-      Message.warning('请先登录')
-      router.push('/auth?mode=login')
-    }
+    // Token 在 httpOnly Cookie 中，JS 无法读取
+    // 尝试通过后端接口验证会话
+    userStore.validateSession().then(valid => {
+      if (valid) {
+        initLoad()
+      } else {
+        Message.warning('请先登录')
+        router.push('/auth?mode=login')
+      }
+    })
   } else {
     initLoad()
   }
@@ -2163,12 +2166,34 @@ onMounted(() => {
 
     .favorite-card {
       flex-direction: column;
+      padding: 10px;
+
+      .card-cover {
+        width: 100%;
+        height: 140px;
+        border-radius: 8px;
+      }
     }
 
     .card-footer {
       flex-direction: column;
       align-items: flex-start;
-      gap: 12px;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      white-space: normal;
+      -webkit-line-clamp: 2;
+    }
+
+    .card-summary {
+      font-size: 12px;
+      -webkit-line-clamp: 2;
+    }
+
+    .card-meta {
+      font-size: 11px;
     }
 
     .unfavorite-btn {
@@ -2182,6 +2207,29 @@ onMounted(() => {
     .user-list-info {
       flex: 1;
       min-width: calc(100% - 60px);
+    }
+
+    .profile-form {
+      :deep(.arco-form-item) {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      :deep(.arco-form-item-label) {
+        text-align: left;
+        margin-bottom: 4px;
+      }
+
+      :deep(.arco-col-12) {
+        flex: 0 0 100%;
+        max-width: 100%;
+      }
+
+      :deep(.arco-radio-group) {
+        display: flex;
+        flex-direction: row;
+        gap: 16px;
+      }
     }
   }
 </style>

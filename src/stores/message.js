@@ -73,57 +73,55 @@ export const useMessageStore = defineStore('message', () => {
     connect: connectWebSocket,
     disconnect: disconnectWebSocket,
   } = useRealtimeConnection({
-    createConnection: (callbacks) => {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-      if (!token) {
-        throw new Error('No token available')
+    createConnection: (callbacks, { reconnect }) => {
+      // 未登录时不建立 WebSocket 连接
+      const userInfo = localStorage.getItem('userInfo')
+      if (!userInfo) {
+        log.debug('未登录，跳过 WebSocket 连接')
+        // 触发 onClose 以停止重连
+        setTimeout(() => callbacks?.onClose?.({ code: 1008, reason: 'Not logged in' }), 0)
+        return { close: () => {}, send: () => {} }
       }
 
-      // 使用 /api/realtime 路径，避免广告拦截器拦截 /ws/ 路径
-      // URL 不携带 token，连接后通过 auth 消息发送
-      const wsUrl = getWebSocketURL('/api/realtime')
-      let authed = false
+      const wsUrl = getWebSocketURL('/ws/message')
 
       return createWebSocketConnection(wsUrl, {
+        // 不传 authToken，依赖 Cookie 自动认证
+        // 后端握手拦截器会从 Cookie 读取 token 进行预认证
         onOpen: callbacks?.onOpen,
-        onMessage: (data) => {
-          // 处理认证响应
-          if (data.type === 'auth_success') {
-            authed = true
-            log.debug('WebSocket 认证成功')
-            return
-          }
-          if (data.type === 'auth_error' || data.type === 'auth_required' || data.type === 'auth_timeout') {
-            log.warn('WebSocket 认证失败:', data.data?.message)
-            // Token 过期，主动提示并跳转登录
-            import('@/apis/request').then(({ handleTokenExpired }) => {
-              handleTokenExpired()
-            })
-            return
-          }
-          // 认证成功后才处理业务消息
-          if (authed && callbacks?.onMessage) {
-            callbacks.onMessage(data)
-          }
-        },
+        onMessage: callbacks?.onMessage,
         onError: (error) => {
           log.error('WebSocket 连接错误:', error)
-          if (callbacks?.onError) {
-            callbacks.onError(error)
-          }
+          callbacks?.onError?.(error)
         },
         onClose: callbacks?.onClose,
-        // 连接建立后立即发送 auth 消息
-        onConnected: (send) => {
-          send({ type: 'auth', token })
+        onAuthFailure: () => {
+          // 认证失败，尝试 refresh token 后重连
+          import('@/stores/user').then(({ useUserStore }) => {
+            const userStore = useUserStore()
+            userStore.refreshAccessToken().then((refreshed) => {
+              if (refreshed) {
+                reconnect()
+              } else {
+                import('@/apis/request').then(({ handleTokenExpired }) => {
+                  handleTokenExpired()
+                })
+              }
+            })
+          })
         },
       })
     },
     onMessage: handleWSMessage,
     shouldReconnect: (event) => {
-      // 认证失败时停止重连
+      // 认证失败时停止自动重连（由 onAuthFailure 处理）
       if (event?.code === 1008 || event?.code === 4001) {
-        log.warn('WebSocket 认证失败，停止重连')
+        log.warn('WebSocket 认证失败，停止自动重连')
+        return false
+      }
+      // 未登录时不重连
+      if (!localStorage.getItem('userInfo')) {
+        log.debug('未登录，停止 WebSocket 重连')
         return false
       }
       return true
@@ -136,6 +134,7 @@ export const useMessageStore = defineStore('message', () => {
   })
 
   const fetchUnreadCount = async () => {
+    if (!localStorage.getItem('userInfo')) return
     try {
       const res = await getUnreadMessageCount()
       if (res.code === 200) {

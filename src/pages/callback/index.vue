@@ -91,14 +91,18 @@ const confirmLoading = ref(false)
 const handleAuthSuccess = (data) => {
   const isLogin = !userStore.isLoggedIn
   Message.success(isLogin ? 'GitHub 登录成功' : 'GitHub 绑定成功')
-  if (data.token) {
-    userStore.setToken(data.token)
-  }
+
+  // Token 通过 httpOnly Cookie 自动设置，无需手动存储
   if (data.user) {
     userStore.setUserInfo(data.user)
   } else {
     userStore.fetchUserInfo()
   }
+
+  if (data.expiresIn) {
+    userStore.setTokenExpiresAt(data.expiresIn)
+  }
+
   // 启动 token 过期定时器
   import('@/apis/request').then(({ setupExpiryTimer }) => {
     setupExpiryTimer()

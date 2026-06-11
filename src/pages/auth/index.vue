@@ -249,6 +249,29 @@ const handleRegisterSuccess = () => {
   }
 }
 
+@media (max-width: 576px) {
+  .auth-container {
+    max-width: 100%;
+    margin: 0;
+  }
+
+  .auth-left {
+    padding: 24px 20px 16px;
+  }
+
+  .brand-name {
+    font-size: 20px;
+  }
+
+  .slogan {
+    font-size: 13px;
+  }
+
+  .auth-right {
+    padding: 24px 16px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .slide-left-enter-active,
   .slide-left-leave-active,

@@ -181,6 +181,10 @@ watch(
   &::-webkit-scrollbar-track {
     background-color: transparent;
   }
+
+  @media (max-width: 768px) {
+    max-height: 200px;
+  }
 }
 
 .toc-list {

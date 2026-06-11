@@ -7,6 +7,7 @@ import '@arco-design/web-vue/dist/arco.css'
 import './styles/animations.scss'
 import router from './router'
 import { useThemeStore } from './stores/theme'
+import log from './utils/logger'
 
 const app = createApp(App)
 
@@ -16,6 +17,11 @@ pinia.use(piniaPluginPersistedstate)
 app.use(pinia)
 app.use(router)
 app.use(ArcoVue)
+
+// 全局未捕获错误处理，防止白屏
+app.config.errorHandler = (err, instance, info) => {
+  log.error('Vue 全局错误:', err, info)
+}
 
 // 初始化主题
 const themeStore = useThemeStore()

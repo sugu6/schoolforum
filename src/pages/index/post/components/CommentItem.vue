@@ -146,6 +146,10 @@ const getMentionUsers = (parentComment) => {
   margin-top: 12px;
   padding-left: 16px;
   border-left: 2px solid var(--color-border-2);
+
+  @media (max-width: 576px) {
+    padding-left: 12px;
+  }
 }
 
 .comment-author-name {

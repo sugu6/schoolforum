@@ -6,7 +6,9 @@ import log from '@/utils/logger'
  * 提供统一的连接管理接口，支持 SSE 和 WebSocket
  *
  * @param {Object} options - 配置选项
- * @param {Function} options.createConnection - 创建连接的函数
+ * @param {Function} options.createConnection - 创建连接的函数，接收 (callbacks, helpers)
+ *   callbacks: { onOpen, onMessage, onError, onClose }
+ *   helpers: { reconnect } - 可直接调用 reconnect 而无需临时变量
  * @param {Function} options.onMessage - 消息处理回调
  * @param {Function} options.onError - 错误处理回调
  * @param {number} options.reconnectDelay - 重连延迟（毫秒），默认 5000
@@ -27,6 +29,7 @@ export function useRealtimeConnection(options = {}) {
   const connection = ref(null)
   const isConnected = ref(false)
   let reconnectTimer = null
+  let isDisconnecting = false
   const reconnectAttempts = ref(0)
 
   /**
@@ -37,43 +40,55 @@ export function useRealtimeConnection(options = {}) {
       return
     }
 
+    isDisconnecting = false
+
     try {
-      connection.value = createConnection({
-        onOpen: () => {
-          isConnected.value = true
-          reconnectAttempts.value = 0
-          clearReconnectTimer()
+      connection.value = createConnection(
+        {
+          onOpen: () => {
+            // 防护：disconnect() 后 onOpen 仍可能触发，此时忽略
+            if (!connection.value) return
+            isConnected.value = true
+            reconnectAttempts.value = 0
+            clearReconnectTimer()
+          },
+          onMessage: (data) => {
+            if (!connection.value) return
+            if (onMessage) {
+              onMessage(data)
+            }
+          },
+          onError: (error) => {
+            isConnected.value = false
+            if (connection.value && typeof connection.value.close === 'function') {
+              connection.value.close()
+            }
+            connection.value = null
+            if (onError) {
+              onError(error)
+            }
+            if (!isDisconnecting) {
+              scheduleReconnect()
+            }
+          },
+          onClose: (event) => {
+            isConnected.value = false
+            connection.value = null
+            if (!isDisconnecting && shouldReconnect(event)) {
+              scheduleReconnect()
+            }
+          },
         },
-        onMessage: (data) => {
-          if (onMessage) {
-            onMessage(data)
-          }
-        },
-        onError: (error) => {
-          isConnected.value = false
-          if (connection.value && typeof connection.value.close === 'function') {
-            connection.value.close()
-          }
-          connection.value = null
-          if (onError) {
-            onError(error)
-          }
-          scheduleReconnect()
-        },
-        onClose: (event) => {
-          isConnected.value = false
-          connection.value = null
-          if (shouldReconnect(event)) {
-            scheduleReconnect()
-          }
-        },
-      })
+        { reconnect },
+      )
     } catch (error) {
       isConnected.value = false
       if (onError) {
         onError(error)
       }
-      scheduleReconnect()
+      if (!isDisconnecting) {
+        scheduleReconnect()
+      }
     }
   }
 
@@ -81,6 +96,7 @@ export function useRealtimeConnection(options = {}) {
    * 断开连接
    */
   const disconnect = () => {
+    isDisconnecting = true
     clearReconnectTimer()
     reconnectAttempts.value = 0
 

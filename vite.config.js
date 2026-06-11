@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
   const serverTarget = env.VITE_SERVER_URL || 'http://localhost:8085'
 
-  return {
+  const config = {
     plugins: [
       VueRouter({
         routesFolder: [
@@ -91,4 +91,17 @@ export default defineConfig(({ mode }) => {
       },
     },
   }
+
+  // Vitest 配置
+  if (process.env.VITEST) {
+    return {
+      ...config,
+      test: {
+        environment: 'jsdom',
+        globals: true,
+      },
+    }
+  }
+
+  return config
 })

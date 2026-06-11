@@ -234,6 +234,7 @@ const expPercent = computed(() => {
 })
 
 const fetchCheckinStatus = async () => {
+  if (!userStore.isLoggedIn) return
   try {
     const res = await getSignStatus()
     const data = res?.data || res

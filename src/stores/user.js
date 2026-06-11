@@ -6,9 +6,9 @@ import log from '@/utils/logger'
 
 export const useUserStore = defineStore('user', () => {
   const userInfo = ref(null)
-  const token = ref('')
+  const tokenExpiresAt = ref(0)
 
-  const isLoggedIn = computed(() => !!token.value && !!userInfo.value)
+  const isLoggedIn = computed(() => !!userInfo.value)
   const userId = computed(() => userInfo.value?.id || null)
   const username = computed(() => userInfo.value?.username || '')
   const avatar = computed(() => getAvatarURL(userInfo.value?.avatarUrl || userInfo.value?.avatar || ''))
@@ -17,65 +17,110 @@ export const useUserStore = defineStore('user', () => {
     return role === 'SUPER_ADMIN' || role === 'ADMIN'
   })
 
-  const setToken = (newToken, remember = true) => {
-    token.value = newToken
-    const storage = remember ? localStorage : sessionStorage
-    storage.setItem('token', newToken)
-    const otherStorage = remember ? sessionStorage : localStorage
-    otherStorage.removeItem('token')
-    otherStorage.removeItem('userInfo')
+  const setUserInfo = (info) => {
+    userInfo.value = info
+    if (info) {
+      localStorage.setItem('userInfo', JSON.stringify(info))
+    } else {
+      localStorage.removeItem('userInfo')
+    }
   }
 
-  const setUserInfo = (info, remember = true) => {
-    userInfo.value = info
-    const storage = remember ? localStorage : sessionStorage
-    storage.setItem('userInfo', JSON.stringify(info))
+  const setTokenExpiresAt = (expiresIn) => {
+    if (expiresIn > 0) {
+      const expiresAt = Date.now() + expiresIn * 1000
+      tokenExpiresAt.value = expiresAt
+      localStorage.setItem('tokenExpiresAt', String(expiresAt))
+    } else {
+      tokenExpiresAt.value = 0
+      localStorage.removeItem('tokenExpiresAt')
+    }
+  }
+
+  const refreshAccessToken = async () => {
+    // 使用原生 fetch 而非 alova，避免 refresh 401 时触发 alova 的 handle401WithRefresh 形成循环
+    try {
+      const { getAPIBaseURL } = await import('@/config/server')
+      const baseURL = getAPIBaseURL()
+      const response = await fetch(`${baseURL}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include', // 携带 httpOnly Cookie（RefreshToken）
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      })
+      if (!response.ok) {
+        log.warn(`Token 刷新失败: HTTP ${response.status}`)
+        return false
+      }
+      const res = await response.json()
+      if (res.code === 200 && res.data?.expiresIn) {
+        setTokenExpiresAt(res.data.expiresIn)
+        return true
+      }
+      return false
+    } catch (error) {
+      log.warn('Token 刷新异常:', error)
+      return false
+    }
   }
 
   const clearUser = () => {
-    token.value = ''
     userInfo.value = null
-    localStorage.removeItem('token')
+    tokenExpiresAt.value = 0
     localStorage.removeItem('userInfo')
-    sessionStorage.removeItem('token')
-    sessionStorage.removeItem('userInfo')
+    localStorage.removeItem('tokenExpiresAt')
   }
 
   const updateUserInfo = (info) => {
     if (userInfo.value) {
       userInfo.value = { ...userInfo.value, ...info }
-      const storage = localStorage.getItem('token') ? localStorage : sessionStorage
-      storage.setItem('userInfo', JSON.stringify(userInfo.value))
+      localStorage.setItem('userInfo', JSON.stringify(userInfo.value))
     }
   }
 
   const fetchUserInfo = async () => {
-    if (!token.value) return
     try {
       const res = await getUserInfo()
       if (res.code === 200) {
         userInfo.value = res.data
+        localStorage.setItem('userInfo', JSON.stringify(res.data))
       }
     } catch (error) {
       log.error('获取用户信息失败:', error)
     }
   }
 
-  const initFromStorage = () => {
-    const localToken = localStorage.getItem('token')
-    const sessionToken = sessionStorage.getItem('token')
-    const storage = localToken ? localStorage : sessionToken ? sessionStorage : null
-
-    if (storage) {
-      token.value = localToken || sessionToken
-      const info = storage.getItem('userInfo')
-      try {
-        userInfo.value = info ? JSON.parse(info) : null
-      } catch {
-        userInfo.value = null
-        localStorage.removeItem('userInfo')
-        sessionStorage.removeItem('userInfo')
+  /**
+   * 通过后端接口验证当前 Cookie 是否有效
+   * 如果有效，同步 userInfo；如果无效，清除用户状态
+   */
+  const validateSession = async () => {
+    try {
+      const res = await getUserInfo()
+      if (res.code === 200) {
+        setUserInfo(res.data)
+        return true
       }
+      clearUser()
+      return false
+    } catch {
+      clearUser()
+      return false
+    }
+  }
+
+  const initFromStorage = () => {
+    const storedUserInfo = localStorage.getItem('userInfo')
+    if (storedUserInfo) {
+      try {
+        userInfo.value = JSON.parse(storedUserInfo)
+      } catch {
+        localStorage.removeItem('userInfo')
+      }
+    }
+    const storedExpiresAt = localStorage.getItem('tokenExpiresAt')
+    if (storedExpiresAt) {
+      tokenExpiresAt.value = Number(storedExpiresAt) || 0
     }
   }
 
@@ -83,16 +128,18 @@ export const useUserStore = defineStore('user', () => {
 
   return {
     userInfo,
-    token,
+    tokenExpiresAt,
     isLoggedIn,
     userId,
     username,
     avatar,
     isAdmin,
-    setToken,
     setUserInfo,
+    setTokenExpiresAt,
+    refreshAccessToken,
     clearUser,
     updateUserInfo,
     fetchUserInfo,
+    validateSession,
   }
 })

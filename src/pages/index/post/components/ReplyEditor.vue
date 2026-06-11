@@ -21,9 +21,9 @@
           :placeholder="placeholder"
           allow-clear
           class="reply-input"
-          :disabled="!userStore.token"
+          :disabled="!userStore.isLoggedIn"
         />
-        <EmojiPicker v-if="userStore.token" @select="insertEmoji" />
+        <EmojiPicker v-if="userStore.isLoggedIn" @select="insertEmoji" />
       </div>
     </template>
     <template #actions>
@@ -77,7 +77,7 @@ const inputRef = ref(null)
 const content = ref('')
 
 const insertEmoji = (emoji) => {
-  if (!userStore.token) return
+  if (!userStore.isLoggedIn) return
   content.value += emoji
 }
 
@@ -95,8 +95,8 @@ defineExpose({
 
 <style lang="scss" scoped>
 .reply-editor {
-  margin-top: 12px;
-  padding: 12px 16px;
+  margin-top: 8px;
+  padding: 16px 20px;
   background: var(--color-fill-2);
   border-radius: 8px;
   margin-left: -40px;
@@ -110,6 +110,12 @@ defineExpose({
 
   :deep(.arco-input-wrapper) {
     width: 100%;
+  }
+
+  @media (max-width: 576px) {
+    padding: 12px;
+    margin-left: -20px;
+    width: calc(100% + 20px);
   }
 }
 
@@ -129,6 +135,12 @@ defineExpose({
 
   :deep(.arco-input-wrapper) {
     width: 100%;
+  }
+
+  @media (max-width: 576px) {
+    padding: 8px;
+    margin-left: -20px;
+    width: calc(100% + 20px);
   }
 }
 

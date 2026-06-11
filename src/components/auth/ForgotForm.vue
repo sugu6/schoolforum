@@ -400,4 +400,17 @@ onUnmounted(() => {
     }
   }
 }
+
+@media (max-width: 576px) {
+  .form-title {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+
+  .steps {
+    :deep(.arco-steps-item-title) {
+      font-size: 10px;
+    }
+  }
+}
 </style>

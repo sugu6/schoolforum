@@ -46,7 +46,7 @@
 
       <!-- 消息通知 -->
       <a-popover v-model:popup-visible="notificationVisible" trigger="click" position="bottom"
-        :content-style="{ padding: '0', width: '360px' }" :arrow-style="{ display: 'none' }">
+        :content-style="{ padding: '0', width: isMobile ? 'calc(100vw - 32px)' : '360px', maxWidth: '360px' }" :arrow-style="{ display: 'none' }">
         <a-tooltip content="系统通知" position="bottom" :unmount-on-close="false">
           <a-badge :count="notificationStore.unreadCount" :max-count="99">
             <div class="message-icon">
@@ -155,6 +155,25 @@
       </div>
     </div>
 
+    <!-- 移动端搜索下拉 -->
+    <div v-if="mobileSearchVisible" class="mobile-search-dropdown" @click.self="mobileSearchVisible = false">
+      <div class="mobile-search-inner">
+        <a-input
+          v-model="mobileSearchQuery"
+          placeholder="搜索帖子、用户..."
+          size="large"
+          allow-clear
+          @keydown.enter="doMobileSearch"
+          ref="mobileSearchInput"
+        >
+          <template #prefix><icon-search /></template>
+          <template #suffix>
+            <span class="search-close" @click="mobileSearchVisible = false">取消</span>
+          </template>
+        </a-input>
+      </div>
+    </div>
+
     <!-- 移动端抽屉菜单 -->
     <a-drawer v-model:visible="mobileMenuVisible" placement="left" :width="280" :footer="false" :header="false">
       <div class="mobile-drawer">
@@ -189,6 +208,7 @@ import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
 import { useMessageStore } from '@/stores/message'
+import { useRealtimeManager } from '@/composables/useRealtimeManager'
 import { toggleThemeWithAnimation } from '@/utils/themeTransition'
 import SiteLogo from '@/components/SiteLogo.vue'
 import {
@@ -218,7 +238,20 @@ const themeStore = useThemeStore()
 const userStore = useUserStore()
 const notificationStore = useNotificationStore()
 const messageStore = useMessageStore()
+const realtimeManager = useRealtimeManager()
 const route = useRoute()
+
+const isMobile = ref(false)
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 576
+}
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
 
 const toggleTheme = (event) => {
   toggleThemeWithAnimation(event, () => {
@@ -227,6 +260,9 @@ const toggleTheme = (event) => {
 }
 
 const mobileMenuVisible = ref(false)
+const mobileSearchVisible = ref(false)
+const mobileSearchQuery = ref('')
+const mobileSearchInput = ref(null)
 const categories = ref([])
 const selectedKeys = ref([])
 const notificationVisible = ref(false)
@@ -343,12 +379,7 @@ const handleHomeClick = () => {
 
 onMounted(() => {
   fetchCategories()
-  if (userStore.isLoggedIn) {
-    notificationStore.fetchUnreadCount()
-    notificationStore.connectSSE()
-    messageStore.fetchUnreadCount()
-    messageStore.connectWebSocket()
-  }
+  realtimeManager.init()
 })
 
 const handleLogin = () => router.push('/auth?mode=login')
@@ -356,7 +387,24 @@ const handleRegister = () => router.push('/auth?mode=register')
 const handlePersonalCenter = () => router.push('/profile?tab=profile')
 const handleCheckinCenter = () => router.push('/checkin')
 const handleAdminDashboard = () => (window.location.href = import.meta.env.VITE_ADMIN_URL || 'http://localhost:8081')
-const handleSearch = () => router.push('/search')
+const handleSearch = () => {
+  if (isMobile.value) {
+    mobileSearchVisible.value = true
+    nextTick(() => {
+      mobileSearchInput.value?.focus()
+    })
+  } else {
+    router.push('/search')
+  }
+}
+
+const doMobileSearch = () => {
+  const q = mobileSearchQuery.value?.trim()
+  if (q) {
+    mobileSearchVisible.value = false
+    router.push({ path: '/search', query: { q } })
+  }
+}
 
 watch(
   () => route.path,
@@ -383,28 +431,6 @@ watch(notificationVisible, (visible) => {
   if (visible && userStore.isLoggedIn) {
     notificationStore.fetchNotifications()
   }
-})
-
-watch(
-  () => userStore.isLoggedIn,
-  (isLoggedIn) => {
-    if (isLoggedIn) {
-      notificationStore.fetchUnreadCount()
-      notificationStore.connectSSE()
-      messageStore.fetchUnreadCount()
-      messageStore.connectWebSocket()
-    } else {
-      notificationStore.disconnectSSE()
-      messageStore.disconnectWebSocket()
-      messageStore.clearUnread()
-    }
-  },
-  { immediate: true },
-)
-
-onUnmounted(() => {
-  notificationStore.disconnectSSE()
-  messageStore.disconnectWebSocket()
 })
 
 const formatTime = formatTimeAgo
@@ -451,6 +477,11 @@ const handlePrivateMessage = () => {
 }
 
 const handleLogout = async () => {
+  // 如果正在处理 token 过期，跳过（避免重复提示和路由冲突）
+  const { isTokenExpiring, clearExpiryTimer } = await import('@/apis/request')
+  if (isTokenExpiring()) return
+  clearExpiryTimer()
+
   try {
     await logout()
   } catch (error) {
@@ -791,10 +822,11 @@ const handleLogout = async () => {
     }
 
     .auth-buttons {
-      gap: 8px;
+      gap: 6px;
 
       .login-btn {
-        display: none;
+        padding: 0 8px;
+        font-size: 13px;
       }
     }
 
@@ -999,5 +1031,30 @@ const handleLogout = async () => {
     .more-text {
       font-size: 13px;
     }
+  }
+
+  /* 移动端搜索下拉 */
+  .mobile-search-dropdown {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: var(--color-bg-2);
+    border-bottom: 1px solid var(--color-border-2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 12px 16px;
+  }
+
+  .mobile-search-inner {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .search-close {
+    color: var(--color-primary-6);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 4px;
   }
 </style>

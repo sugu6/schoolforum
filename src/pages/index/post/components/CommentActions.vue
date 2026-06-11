@@ -60,6 +60,11 @@ defineEmits(['like', 'reply', 'delete'])
     background: var(--color-fill-3);
     color: rgb(var(--primary-6));
   }
+
+  @media (max-width: 576px) {
+    padding: 0 6px;
+    font-size: 12px;
+  }
 }
 
 .delete-action {

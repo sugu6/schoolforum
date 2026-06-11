@@ -1,6 +1,6 @@
 <template>
   <div class="comment-input-wrapper">
-    <div v-if="userStore.token" class="comment-input-logged-in">
+    <div v-if="userStore.isLoggedIn" class="comment-input-logged-in">
       <div class="comment-input-header">
         <div class="comment-user-info">
           <a-avatar :size="40">
@@ -77,13 +77,13 @@ const textareaRef = ref(null)
 const content = ref('')
 
 const insertEmoji = (emoji) => {
-  if (!userStore.token) return
+  if (!userStore.isLoggedIn) return
   content.value += emoji
 }
 
 const handleSubmit = () => {
   if (!content.value.trim()) return
-  if (!userStore.token) {
+  if (!userStore.isLoggedIn) {
     emit('login')
     return
   }
@@ -156,6 +156,12 @@ defineExpose({
   align-items: center;
   padding-top: 12px;
   border-top: 1px solid var(--color-border-1);
+
+  @media (max-width: 576px) {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
 }
 
 .comment-tips {
@@ -164,10 +170,18 @@ defineExpose({
   gap: 6px;
   font-size: 12px;
   color: var(--color-text-3);
+
+  @media (max-width: 576px) {
+    justify-content: center;
+  }
 }
 
 .submit-btn {
   min-width: 100px;
+
+  @media (max-width: 576px) {
+    width: 100%;
+  }
 }
 
 .login-tip {

@@ -156,8 +156,77 @@
       </a-col>
     </a-row>
 
+    <!-- 移动端侧边栏内容 -->
+    <div class="mobile-sidebar-content">
+      <a-card class="sidebar-card checkin-card" :header-style="{ textAlign: 'center' }">
+        <template #title>
+          <div class="card-title-compact"><icon-check-circle /> 每日签到</div>
+        </template>
+        <div class="checkin-body">
+          <div class="checkin-header">
+            <span class="checkin-date">{{ todayDate }}</span>
+            <div class="checkin-status">
+              <a-spin v-if="loadingCheckin" :size="14" />
+              <span v-if="loadingCheckin">加载中...</span>
+              <template v-else-if="checkedIn">
+                <icon-check-circle-fill class="checkin-icon checked" />
+                <span>今日已签到</span>
+              </template>
+              <span v-else class="checkin-tip">今天还没有签到哦~</span>
+            </div>
+          </div>
+          <a-button long size="small" type="primary" :loading="checkingIn" :disabled="checkedIn" @click="handleCheckin">
+            <icon-check-circle />
+            {{ checkedIn ? '已签到' : '立即签到' }}
+          </a-button>
+          <div class="checkin-stats" v-if="isLoggedIn">
+            <div class="stat-row">
+              <a-tag color="arcoblue" size="small">Lv.{{ checkinStats.level }}</a-tag>
+              <span class="stat-text">经验 {{ checkinStats.exp }}</span>
+            </div>
+            <div class="stat-divider" />
+            <div class="stat-row">
+              <span class="stat-num">{{ checkinStats.continuousDays }}</span>
+              <span class="stat-label">连续</span>
+            </div>
+            <div class="stat-divider" />
+            <div class="stat-row">
+              <span class="stat-num">{{ checkinStats.points }}</span>
+              <span class="stat-label">积分</span>
+            </div>
+          </div>
+        </div>
+      </a-card>
+
+      <a-card class="sidebar-card" :header-style="{ textAlign: 'center' }">
+        <template #title>
+          <div class="card-title-compact"><icon-fire /> 热门榜</div>
+        </template>
+        <a-list :bordered="false" size="small">
+          <a-list-item v-for="(post, i) in hotPosts.slice(0, 5)" :key="post.id" class="hot-post-item" @click="goToPost(post.id)">
+            <span class="hot-rank" :class="{ 'rank-top': i < 3 }">{{ i + 1 }}</span>
+            <span class="hot-title">{{ post.title }}</span>
+            <span class="hot-heat" :class="{ 'heat-high': post.heat >= 500, 'heat-mid': post.heat >= 100 && post.heat < 500 }">
+              <icon-fire />{{ formatHeat(post.heat) }}
+            </span>
+          </a-list-item>
+        </a-list>
+      </a-card>
+
+      <a-card class="sidebar-card" :header-style="{ textAlign: 'center' }">
+        <template #title>
+          <div class="card-title-compact"><icon-thunderbolt /> 快捷</div>
+        </template>
+        <a-space direction="vertical" fill>
+          <a-button long size="small" type="primary" @click="handleCreatePost"><icon-edit /> 发布帖子</a-button>
+          <a-button long size="small" @click="handleMyFavorites"><icon-star /> 我的收藏</a-button>
+          <a-button long size="small" @click="handleBrowseHistory"><icon-history /> 浏览历史</a-button>
+        </a-space>
+      </a-card>
+    </div>
+
     <a-modal v-model:visible="announcementDialogVisible" :title="announcementDetail?.title || '公告详情'" :footer="false"
-      :width="600" unmount-on-close>
+      :width="isMobile ? '95%' : 600" :style="{ maxWidth: isMobile ? '100%' : '600px' }" unmount-on-close>
       <div v-if="loadingDetail" style="text-align: center; padding: 40px 0">
         <a-spin />
       </div>
@@ -205,6 +274,13 @@ import { useRouteQuery } from '@vueuse/router'
 import { useIntersectionObserver } from '@vueuse/core'
 import { Message } from '@arco-design/web-vue'
 import PostCard from '@/components/PostCard.vue'
+
+const isMobile = ref(window.innerWidth <= 768)
+onMounted(() => {
+  window.addEventListener('resize', () => {
+    isMobile.value = window.innerWidth <= 768
+  })
+})
 
 definePage({
   meta: {
@@ -287,7 +363,9 @@ const hotPosts = ref([])
 const formatHeat = (num) => {
   if (num >= 10000) return (num / 10000).toFixed(1) + 'w'
   if (num >= 1000) return (num / 1000).toFixed(1) + 'k'
-  return String(num)
+  if (num >= 100) return Math.round(num).toString()
+  if (num >= 10) return num.toFixed(1)
+  return num.toFixed(2)
 }
 
 const fetchHotPosts = async () => {
@@ -395,6 +473,7 @@ const fetchPostList = async (reset = false) => {
 }
 
 const checkPostsFavoriteStatus = async (posts) => {
+  if (!userStore.isLoggedIn) return
   try {
     const favoritePromises = posts.map(async (post) => {
       try {
@@ -403,12 +482,15 @@ const checkPostsFavoriteStatus = async (posts) => {
           post.isFavorited = res.data?.isFavorited === true || res.data === true
         }
       } catch (error) {
-        log.error(`检查帖子 ${post.id} 收藏状态失败:`, error)
+        // 401 等认证错误静默跳过，不影响帖子列表展示
+        if (!error?.message?.includes('401')) {
+          log.error(`检查帖子 ${post.id} 收藏状态失败:`, error)
+        }
       }
     })
     await Promise.all(favoritePromises)
   } catch (error) {
-    log.error('批量检查收藏状态失败:', error)
+    // 批量检查失败不影响主流程
   }
 }
 
@@ -1137,6 +1219,177 @@ onActivated(() => {
       padding: 16px;
       font-size: 12px;
     }
+  }
+
+  /* 移动端侧边栏内容 */
+  .mobile-sidebar-content {
+    display: none;
+  }
+
+  @media (max-width: 992px) {
+    .mobile-sidebar-content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+    }
+  }
+
+  .card-title-compact {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    width: 100%;
+  }
+
+  .checkin-card {
+    :deep(.arco-card-body) {
+      padding: 16px;
+    }
+  }
+
+  .checkin-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .checkin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .checkin-date {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-1);
+    white-space: nowrap;
+  }
+
+  .checkin-status {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    font-size: 12px;
+  }
+
+  .checkin-icon {
+    font-size: 16px;
+    &.checked { color: rgb(var(--green-6)); }
+  }
+
+  .checkin-tip {
+    color: var(--color-text-3);
+    font-size: 12px;
+  }
+
+  .checkin-stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding-top: 6px;
+    border-top: 1px solid var(--color-border-2);
+    gap: 8px;
+  }
+
+  .stat-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+  }
+
+  .stat-num {
+    font-size: 18px;
+    font-weight: 700;
+    color: rgb(var(--primary-6));
+    line-height: 1.2;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--color-text-3);
+  }
+
+  .stat-text {
+    font-size: 11px;
+    color: var(--color-text-3);
+  }
+
+  .stat-divider {
+    width: 1px;
+    height: 28px;
+    background-color: var(--color-border-2);
+  }
+
+  .hot-post-item {
+    padding: 8px 0 !important;
+    cursor: pointer;
+
+    :deep(.arco-list-item-content) {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    &:hover .hot-title {
+      color: rgb(var(--primary-6));
+    }
+  }
+
+  .hot-rank {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background-color: var(--color-fill-3);
+    color: var(--color-text-3);
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &.rank-top {
+      background-color: rgb(var(--danger-6));
+      color: #fff;
+    }
+  }
+
+  .hot-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--color-text-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1;
+  }
+
+  .hot-heat {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-3);
+    white-space: nowrap;
+
+    &.heat-high { color: rgb(var(--danger-6)); }
+    &.heat-mid { color: rgb(var(--warning-6)); }
   }
 </style>
 

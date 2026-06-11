@@ -91,10 +91,18 @@ watch(
     :deep(.arco-card-header) {
       padding: 16px 20px;
       border-bottom: 1px solid var(--color-border-2);
+
+      @media (max-width: 576px) {
+        padding: 12px 16px;
+      }
     }
 
     :deep(.arco-card-body) {
       padding: 16px 20px;
+
+      @media (max-width: 576px) {
+        padding: 12px 16px;
+      }
     }
   }
 

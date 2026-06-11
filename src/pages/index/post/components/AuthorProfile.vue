@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿<template>
+﻿﻿﻿﻿﻿﻿﻿<template>
   <a-card class="author-card sidebar-card" :bordered="true" :loading="loading">
     <div v-if="!loading && authorInfo.id" class="author-profile">
       <a-avatar :size="64" class="profile-avatar">
@@ -236,6 +236,11 @@ watch(
   padding: 16px 0;
   border-top: 1px solid var(--color-border-2);
   border-bottom: 1px solid var(--color-border-2);
+
+  @media (max-width: 576px) {
+    gap: 24px;
+    padding: 12px 0;
+  }
 }
 
 .stat-item {
@@ -248,6 +253,10 @@ watch(
   font-size: 18px;
   font-weight: 600;
   color: var(--color-text-1);
+
+  @media (max-width: 576px) {
+    font-size: 16px;
+  }
 }
 
 .stat-label {

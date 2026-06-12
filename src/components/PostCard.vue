@@ -21,16 +21,16 @@
             更新于 {{ formatTime(localPost.updatedAt) }}
           </template>
           <template v-else> 发布于 {{ formatTime(localPost.createdAt) }} </template>
-          <template v-if="displayTags && displayTags.length">
+          <span class="inline-tags" v-if="displayTags && displayTags.length">
             <a-tag v-for="tag in displayTags" :key="tag" color="blue" size="small" class="inline-tag">
               {{ tag }}
             </a-tag>
-          </template>
+          </span>
         </span>
       </div>
-      <a-tag v-if="isPinned" color="red" size="small">置顶</a-tag>
-      <a-tag v-if="isEssential" color="gold" size="small">精华</a-tag>
-      <a-tag v-if="displayCategoryName" :color="getTagColor(displayParentCategory || displayCategoryName)" size="small">
+      <a-tag v-if="isPinned" color="red" size="small" class="pinned-tag">置顶</a-tag>
+      <a-tag v-if="isEssential" color="gold" size="small" class="essential-tag">精华</a-tag>
+      <a-tag v-if="displayCategoryName" :color="getTagColor(displayParentCategory || displayCategoryName)" size="small" class="category-tag-mobile">
         {{ displayCategoryName }}
       </a-tag>
     </div>
@@ -490,5 +490,42 @@ watch(() => localPost.value.content, async (newContent) => {
 @media (max-width: 576px) {
   .post-images { grid-template-columns: 1fr 1fr; gap: 6px; }
   .post-image { border-radius: 6px; }
+
+  .post-header {
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: flex-start;
+  }
+
+  .post-meta {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .post-time {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+  }
+
+  .post-time .inline-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .inline-tag {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .pinned-tag, .essential-tag {
+    margin-left: auto;
+  }
+
+  .category-tag-mobile {
+    margin-left: auto;
+  }
 }
 </style>

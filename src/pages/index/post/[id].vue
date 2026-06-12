@@ -1,13 +1,9 @@
 <template>
   <div class="post-detail-page">
     <a-row :gutter="[20, 0]">
-      <!-- 左侧目录导航 -->
+      <!-- 左侧占位 -->
       <a-col :xs="0" :sm="0" :md="0" :lg="4" :xl="5" :xxl="5">
-        <div class="left-sidebar">
-          <a-affix :offset-top="80">
-            <TableOfContents v-if="headings.length > 0" :headings="headings" :offset="80" />
-          </a-affix>
-        </div>
+        <div class="left-sidebar"></div>
       </a-col>
 
       <!-- 中间主要内容 -->
@@ -25,7 +21,9 @@
       <a-col :xs="0" :sm="0" :md="0" :lg="4" :xl="5" :xxl="5">
         <div class="post-sidebar">
           <AuthorProfile v-if="post" :author-id="post.authorId" @follow-change="handleFollowChange" />
-          <RelatedPosts :post-id="postId" />
+          <a-affix :offset-top="80">
+            <TableOfContents v-if="headings.length > 0" :headings="headings" :offset="80" />
+          </a-affix>
         </div>
       </a-col>
     </a-row>
@@ -48,7 +46,6 @@ import PostCard from '@/components/PostCard.vue'
 import TableOfContents from '@/components/TableOfContents.vue'
 import CommentSection from './components/CommentSection.vue'
 import AuthorProfile from './components/AuthorProfile.vue'
-import RelatedPosts from './components/RelatedPosts.vue'
 
 const router = useRouter()
 const postId = useRouteParams('id')

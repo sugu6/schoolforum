@@ -46,11 +46,8 @@ export function handleTokenExpired() {
   import('@/stores/user').then(({ useUserStore }) => {
     const userStore = useUserStore()
     userStore.clearUser()
-    return import('@/router')
-  }).then(({ default: router }) => {
-    router.push('/auth?mode=login')
   }).catch(() => {
-    // 导航失败时忽略
+    // 清除用户状态失败时忽略
   }).finally(() => {
     setTimeout(() => {
       handling401 = false

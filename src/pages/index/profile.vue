@@ -2185,11 +2185,13 @@ onMounted(() => {
       font-size: 14px;
       white-space: normal;
       -webkit-line-clamp: 2;
+      line-clamp: 2;
     }
 
     .card-summary {
       font-size: 12px;
       -webkit-line-clamp: 2;
+      line-clamp: 2;
     }
 
     .card-meta {

@@ -18,6 +18,17 @@
 
 ---
 
+## 🔗 项目地址
+
+| 项目 | 地址 |
+|------|------|
+| 在线站点 | https://schoolforum.sugu6.top |
+| 管理后台 | https://schoolforum.sugu6.top/admin/ |
+| GitHub | https://github.com/sugu6/schoolforum |
+| Gitee | https://gitee.com/y3342113181/schoolforum |
+
+---
+
 ## 🌊 项目简介
 
 **海语**是一个现代化的校园论坛社区平台，专为学生打造的开放、自由的交流空间。
@@ -101,7 +112,7 @@
 1. **克隆项目**
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/sugu6/schoolforum.git
 cd schoolforum
 ```
 

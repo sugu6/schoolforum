@@ -169,6 +169,7 @@
 
 <script setup>
 import { IconSearch, IconUser, IconApps, IconFile, IconRight } from '@arco-design/web-vue/es/icon'
+import { Message } from '@arco-design/web-vue'
 import { searchAll } from '@/apis/search'
 import PostCard from '@/components/PostCard.vue'
 import { getAvatarURL } from '@/config/server'
@@ -245,11 +246,14 @@ const doSearch = async () => {
       usersResult.value = res.data.users || { hits: [], totalHits: 0, totalPages: 0 }
       processingTime.value =
         res.data.posts?.processingTimeMs || res.data.users?.processingTimeMs || 0
+    } else {
+      Message.error('搜索服务暂不可用，请稍后重试')
     }
 
     router.replace({ query: { q, type: searchType.value } })
   } catch (error) {
     log.error('搜索失败:', error)
+    Message.error('搜索服务暂不可用，请稍后重试')
   } finally {
     loading.value = false
   }

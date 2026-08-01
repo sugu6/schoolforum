@@ -56,7 +56,7 @@ jobs:
           password: ${{ secrets.ROOT_PASSWORD }}
           port: ${{ secrets.DOCKER_PORT || 22 }}
           source: "dist/*"
-          target: /var/www/schoolforum/
+          target: /www/wwwroot/schoolforum/
           strip_components: 1
 
       - name: Reload Nginx
